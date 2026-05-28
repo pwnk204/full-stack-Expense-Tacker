@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Tracker | Expense Tracker</title>
+    <link rel="stylesheet" href="./css/daily.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="brand">ExpenseTracker</div>
+        <nav class="nav-links">
+            <a href="daily.html" class="nav-btn active">Daily</a>
+            <a href="monthly.html" class="nav-btn">Monthly</a>
+            <a href="yearly.html" class="nav-btn">Yearly</a>
+            <button type="button" id="btn-premium" class="btn-premium">
+                Premium
+            </button>
+            <a href="profile.html" class="nav-btn profile-btn">Profile</a>
+        </nav>
+    </header>
+
+    <main class="daily-container">
+        <section class="summary-header">
+            <div class="date-display">
+                <button type="button" class="date-arrow">&lt;</button>
+                <div class="current-date">
+                    <span class="day">16</span>
+                    <div class="month-year">
+                        <span>May, 2026</span>
+                        <small>Saturday</small>
+                    </div>
+                </div>
+                <button type="button" class="date-arrow">&gt;</button>
+            </div>
+
+            <div class="balance-display">
+                <small>Balance</small>
+                <h3>$392.00</h3>
+            </div>
+
+            <button type="button" id="add-entry-btn" class="btn-create">
+                <span class="plus-icon">+</span> Create
+            </button>
+        </section>
+
+        <section class="transaction-card">
+            <div class="cf-row">
+                <span>C/F</span>
+                <span class="cf-amount">-$44.00</span>
+            </div>
+
+            <div class="transaction-section credit-section">
+                <div class="section-header credit-header">
+                    <h4>Income (Credit)</h4>
+                    <h4>$500.00</h4>
+                </div>
+                <ul class="transaction-list">
+                    <li class="transaction-item">
+                        <span class="item-note">Salary</span>
+                        <span class="item-amount credit-amount">500.00</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="transaction-section debit-section">
+                <div class="section-header debit-header">
+                    <h4>Expense (Debit)</h4>
+                    <h4>$64.00</h4>
+                </div>
+                <ul class="transaction-list">
+                    <li class="transaction-item">
+                        <span class="item-note">Groceries</span>
+                        <span class="item-amount debit-amount">64.00</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <div id="expenseModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Record</h2>
+                <button type="button" id="closeModalBtn" class="close-btn">&times;</button>
+            </div>
+
+            <form id="createExpenseForm">
+                <div class="form-group toggle-group">
+                    <label>
+                        <input type="radio" name="transactionType" value="debit" checked> Expense
+                    </label>
+                    <label>
+                        <input type="radio" name="transactionType" value="credit"> Income
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="amount">Amount ($)</label>
+                    <input type="number" id="amount" name="amount" step="0.01" placeholder="0.00" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="date">Date</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required>
+                        <option value="housing">Housing</option>
+                        <option value="food">Food</option>
+                        <option value="transportation">Transportation</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="salary">Salary</option>
+                        <option value="other" selected>Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" name="description" placeholder="e.g., Weekly groceries"
+                        required>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancelBtn" class="btn-secondary">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+    <script src="./js/daily.js"></script>
+</body>
+
+</html>

@@ -106,7 +106,6 @@ const handleTransactionAction = async (e) => {
   const deleteBtn = e.target.closest(".btn-delete");
 
   if (deleteBtn) {
-  
     const expenseId = deleteBtn.dataset.id;
     console.log("Delete clicked for ID:", expenseId);
 
@@ -130,10 +129,44 @@ const handleTransactionAction = async (e) => {
   if (editBtn) {
     const expenseId = editBtn.dataset.id;
     console.log("Edit clicked for ID:", expenseId);
-
-   
   }
 };
+
+const cashfree = Cashfree({
+  mode: "sandbox",
+});
+
+async function handlePremiumCheckout() {
+  try {
+    const premiumBtn = document.getElementById("btn-premium");
+    const originalText = premiumBtn.innerHTML;
+    premiumBtn.innerHTML = "⏳ Loading...";
+    premiumBtn.disabled = true;
+
+    // create Order
+    const response = await axios.post(
+      "http://127.0.0.1:3000/api/v1/payment",
+      {},
+      {
+        withCredentials: true,
+      },
+    );
+
+    const paymentSessionId = response.data.order.payment_session_id;
+
+    // 4. Launch Cashfree Checkout
+    let checkoutOptions = {
+      paymentSessionId: paymentSessionId,
+      redirectTarget: "_self", //opens a popup.
+    };
+
+    // This launches the UI. It does NOT wait for the payment to finish.
+    await cashfree.checkout(checkoutOptions);
+  } catch (error) {
+    console.error("Could not initiate checkout:", error);
+    alert("Payment initialization failed.");
+  }
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const addEntryBtn = document.getElementById("add-entry-btn");
@@ -150,6 +183,12 @@ document.addEventListener("DOMContentLoaded", () => {
     expenseModal.style.display = "none";
     createExpenseForm.reset();
   };
+
+  const premiumBtn = document.getElementById("btn-premium");
+
+  if (premiumBtn) {
+    premiumBtn.addEventListener("click", handlePremiumCheckout);
+  }
 
   if (addEntryBtn) addEntryBtn.addEventListener("click", openModal);
   if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
