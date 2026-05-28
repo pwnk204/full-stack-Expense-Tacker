@@ -4,9 +4,12 @@ import { StatusCodes } from "http-status-codes";
 
 const createExpense = async (req, res, next) => {
   try {
-    const { amount, date, category, description, transactionType, userId } = req.body;
+    console.log("inside createExpense: ", req.userId);
+    const { amount, date, category, description, transactionType} = req.body;
 
-    if (!category || !date || !amount || !description || !transactionType || !userId) {
+    console.log("req.body: ", req.body);
+
+    if (!category || !date || !amount || !description || !transactionType || !req.userId) {
       return next(new AppError("All fields are required", "BAD_REQUEST", 400));
     }
 
@@ -16,7 +19,7 @@ const createExpense = async (req, res, next) => {
       date: date,
       amount: amount,
       transactionType: transactionType,
-      userId: userId
+      userId: req.userId
     });
 
     res.status(StatusCodes.CREATED).json({
@@ -43,7 +46,7 @@ const getExpenses = async (req, res, next) => {
     res.status(StatusCodes.OK).json({
       success: "true",
       message: "fetched all the expenses successfully",
-      data: { expenses: expenses },
+      expenses: expenses ,
     });
   } catch (error) {
     next(
