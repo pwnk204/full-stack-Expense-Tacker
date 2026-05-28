@@ -1,6 +1,4 @@
-
 const API_URL = "http://127.0.0.1:3000/api/v1/expense";
-
 
 async function createExpense(e) {
   e.preventDefault();
@@ -24,7 +22,6 @@ async function createExpense(e) {
     console.error("Expense creation failed:", error);
 
     if (error.response && error.response.data && error.response.data.message) {
-      
       alert(error.response.data.message);
     } else {
       alert("Cannot create expense.");
@@ -34,24 +31,29 @@ async function createExpense(e) {
 
 async function fetchExpenses() {
   try {
-   
     const response = await axios.get(`${API_URL}/all`, {
       withCredentials: true,
     });
 
     const expenses = response.data.expenses;
 
-    const creditList = document.querySelector(".credit-section .transaction-list");
-    const debitList = document.querySelector(".debit-section .transaction-list");
+    const creditList = document.querySelector(
+      ".credit-section .transaction-list",
+    );
+    const debitList = document.querySelector(
+      ".debit-section .transaction-list",
+    );
     const balanceDisplay = document.querySelector(".balance-display h3");
-    const totalCreditDisplay = document.querySelector(".credit-header h4:nth-child(2)");
-    const totalDebitDisplay = document.querySelector(".debit-header h4:nth-child(2)");
+    const totalCreditDisplay = document.querySelector(
+      ".credit-header h4:nth-child(2)",
+    );
+    const totalDebitDisplay = document.querySelector(
+      ".debit-header h4:nth-child(2)",
+    );
 
-    
     creditList.innerHTML = "";
     debitList.innerHTML = "";
 
-    
     let totalCredit = 0;
     let totalDebit = 0;
 
@@ -64,16 +66,24 @@ async function fetchExpenses() {
       if (item.transactionType === "credit") {
         totalCredit += parseFloat(item.amount);
         li.innerHTML = `
-          <span class="item-note">${item.description}</span>
-          <span class="item-amount credit-amount">${amountStr}</span>
-        `;
+        <span class="item-note">${item.description}</span>
+        <span class="item-amount credit-amount">${amountStr}</span>
+        <div class="action-buttons">
+            <button type="button" class="btn-edit" data-id="${item.id}">Edit</button>
+            <button type="button" class="btn-delete" data-id="${item.id}">Delete</button>
+        </div>
+    `;
         creditList.appendChild(li);
       } else {
         totalDebit += parseFloat(item.amount);
         li.innerHTML = `
-          <span class="item-note">${item.description}</span>
-          <span class="item-amount debit-amount">${amountStr}</span>
-        `;
+        <span class="item-note">${item.description}</span>
+        <span class="item-amount debit-amount">${amountStr}</span>
+        <div class="action-buttons">
+            <button type="button" class="btn-edit" data-id="${item.id}">Edit</button>
+            <button type="button" class="btn-delete" data-id="${item.id}">Delete</button>
+        </div>
+    `;
         debitList.appendChild(li);
       }
     });
@@ -83,7 +93,6 @@ async function fetchExpenses() {
     balanceDisplay.innerText = `$${currentBalance.toFixed(2)}`;
     totalCreditDisplay.innerText = `$${totalCredit.toFixed(2)}`;
     totalDebitDisplay.innerText = `$${totalDebit.toFixed(2)}`;
-    
   } catch (error) {
     console.error("Failed to fetch expenses:", error);
     if (error.response && error.response.status === 401) {
@@ -91,6 +100,40 @@ async function fetchExpenses() {
     }
   }
 }
+
+const handleTransactionAction = async (e) => {
+  //check clicked btn is delete
+  const deleteBtn = e.target.closest(".btn-delete");
+
+  if (deleteBtn) {
+  
+    const expenseId = deleteBtn.dataset.id;
+    console.log("Delete clicked for ID:", expenseId);
+
+    if (confirm("Are you sure you want to delete this record?")) {
+      try {
+        await axios.delete(`${API_URL}/${expenseId}`, {
+          withCredentials: true,
+        });
+
+        fetchExpenses();
+      } catch (error) {
+        console.error("Delete failed:", error);
+        alert("Could not delete the expense.");
+      }
+    }
+    return;
+  }
+
+  // Check the clicked is edit
+  const editBtn = e.target.closest(".btn-edit");
+  if (editBtn) {
+    const expenseId = editBtn.dataset.id;
+    console.log("Edit clicked for ID:", expenseId);
+
+   
+  }
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   const addEntryBtn = document.getElementById("add-entry-btn");
@@ -108,7 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
     createExpenseForm.reset();
   };
 
-  
   if (addEntryBtn) addEntryBtn.addEventListener("click", openModal);
   if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
   if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
@@ -119,8 +161,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-
   createExpenseForm.addEventListener("submit", createExpense);
 
   fetchExpenses();
+
+  const creditList = document.querySelector(
+    ".credit-section .transaction-list",
+  );
+  const debitList = document.querySelector(".debit-section .transaction-list");
+  if (creditList) creditList.addEventListener("click", handleTransactionAction);
+  if (debitList) debitList.addEventListener("click", handleTransactionAction);
 });

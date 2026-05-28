@@ -5,11 +5,18 @@ import { StatusCodes } from "http-status-codes";
 const createExpense = async (req, res, next) => {
   try {
     console.log("inside createExpense: ", req.userId);
-    const { amount, date, category, description, transactionType} = req.body;
+    const { amount, date, category, description, transactionType } = req.body;
 
     console.log("req.body: ", req.body);
 
-    if (!category || !date || !amount || !description || !transactionType || !req.userId) {
+    if (
+      !category ||
+      !date ||
+      !amount ||
+      !description ||
+      !transactionType ||
+      !req.userId
+    ) {
       return next(new AppError("All fields are required", "BAD_REQUEST", 400));
     }
 
@@ -19,7 +26,7 @@ const createExpense = async (req, res, next) => {
       date: date,
       amount: amount,
       transactionType: transactionType,
-      userId: req.userId
+      userId: req.userId,
     });
 
     res.status(StatusCodes.CREATED).json({
@@ -31,8 +38,8 @@ const createExpense = async (req, res, next) => {
     next(
       new AppError(
         "Error creating expense",
-        String(StatusCodes.INTERNAL_SERVER_ERROR),
-        500,
+        "INTERNAL_SERVER_ERROR",
+        StatusCodes.INTERNAL_SERVER_ERROR,
         { cause: error },
       ),
     );
@@ -46,7 +53,7 @@ const getExpenses = async (req, res, next) => {
     res.status(StatusCodes.OK).json({
       success: "true",
       message: "fetched all the expenses successfully",
-      expenses: expenses ,
+      expenses: expenses,
     });
   } catch (error) {
     next(
@@ -60,7 +67,40 @@ const getExpenses = async (req, res, next) => {
   }
 };
 
-export {
-    createExpense,
-    getExpenses,
-}
+const deleteExpense = async (req, res, next) => {
+  try {
+    const expenseId = req.params.id;
+    const userId = req.userId;
+
+    const deletedExpenseRow = await Expense.destroy({
+      where: { id: expenseId, userId: userId },
+    });
+
+    if (deletedExpenseRow === 0) {
+      return next(
+        new AppError(
+          "Expense not found or unauthorized",
+          "NOT_FOUND",
+          StatusCodes.NOT_FOUND,
+        ),
+      );
+    }
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "Expense deleted successfully!",
+    });
+  } catch (error) {
+    console.log("delete Expense error: ", error);
+    return next(
+      new AppError(
+        "Internal server error during deleting expense.",
+        "INTERNAL_SERVER_ERROR",
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        {cause: error}
+      ),
+    );
+  }
+};
+
+export { createExpense, getExpenses, deleteExpense };
