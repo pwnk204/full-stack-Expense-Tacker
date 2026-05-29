@@ -150,7 +150,13 @@ const verifyUser = async (req, res, next) => {
     const user = await User.findOne({ where: { verificationToken: token } });
 
     if (!user) {
-      return next(new AppError("Invalid or expired verification token.", "BAD_REQUEST", StatusCodes.BAD_REQUEST));
+      return next(
+        new AppError(
+          "Invalid or expired verification token.",
+          "BAD_REQUEST",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
     }
 
     user.isVerified = true;
@@ -190,7 +196,7 @@ const login = async (req, res, next) => {
   }
 
   try {
-    const userExist = await User.findOne({ where : {userEmail: userEmail }});
+    const userExist = await User.findOne({ where: { userEmail: userEmail } });
 
     console.log("userexist:", userExist);
     console.log("userexistemail: ", userExist.userEmail);
@@ -234,6 +240,8 @@ const login = async (req, res, next) => {
 
     res.cookie("token", token, cookieOptions);
 
+    // res.redirect('http://127.0.0.1/');
+
     res.status(200).json({
       message: "login successfull",
       success: true,
@@ -253,4 +261,25 @@ const login = async (req, res, next) => {
   }
 };
 
-export { registerUser, verifyUser, login };
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.userId, {
+     
+      attributes: { exclude: ["password"] },
+    });
+
+    if (!user) {
+      const error = new Error("User not found.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      user: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+export { registerUser, verifyUser, login, getMe };
