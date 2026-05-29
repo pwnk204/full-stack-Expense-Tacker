@@ -101,6 +101,78 @@ async function fetchExpenses() {
   }
 }
 
+async function fetchUserProfile() {
+  try {
+    const response = await axios.get("http://127.0.0.1:3000/api/v1/user/me", {
+      withCredentials: true,
+    });
+
+    const user = response.data.user;
+    const premiumBtn = document.getElementById("btn-premium");
+    const leaderboardBtn = document.getElementById("btn-leaderboard");
+
+    if (user.isPremium) {
+      // 1. Handle the Premium Button safely
+      if (premiumBtn) {
+        premiumBtn.innerHTML = "Premium Member";
+        premiumBtn.disabled = true;
+        premiumBtn.classList.add("is-premium-badge");
+      }
+
+      // 2. Handle the Leaderboard Button safely!
+      if (leaderboardBtn) {
+        leaderboardBtn.classList.remove("hidden");
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch user profile:", error);
+  }
+}
+
+async function fetchLeaderboard() {
+  const leaderboardModal = document.getElementById("leaderboardModal");
+  const leaderboardList = document.getElementById("leaderboard-list");
+
+  leaderboardModal.style.display = "flex";
+  leaderboardList.innerHTML = "<li>Loading ranks</li>";
+
+  try {
+   
+    const response = await axios.get(
+      "http://127.0.0.1:3000/api/v1/premium/leaderboard",
+      {
+        withCredentials: true,
+      },
+    );
+
+    const leaderboardData = response.data;
+
+    console.log(leaderboardData);
+
+   
+    leaderboardList.innerHTML = "";
+
+    // add data into list
+    leaderboardData.forEach((user, index) => {
+      // Your original logic here was correct!
+      const total = user.totalExpense
+        ? parseFloat(user.totalExpense).toFixed(2)
+        : "0.00";
+
+      const li = document.createElement("li");
+      li.classList.add("transaction-item");
+      li.innerHTML = `
+                <span class="item-note"><strong>#${index + 1}</strong> ${user.userName}</span>
+                <span class="item-amount debit-amount">$${total}</span>
+            `;
+      leaderboardList.appendChild(li);
+    });
+  } catch (error) {
+    console.error("Leaderboard error:", error);
+    leaderboardList.innerHTML = "<li>Could not load leaderboard.</li>";
+  }
+}
+
 const handleTransactionAction = async (e) => {
   //check clicked btn is delete
   const deleteBtn = e.target.closest(".btn-delete");
@@ -160,7 +232,6 @@ async function handlePremiumCheckout() {
       redirectTarget: "_self", //opens a popup.
     };
 
-    // This launches the UI. It does NOT wait for the payment to finish.
     await cashfree.checkout(checkoutOptions);
   } catch (error) {
     console.error("Could not initiate checkout:", error);
@@ -203,6 +274,7 @@ document.addEventListener("DOMContentLoaded", () => {
   createExpenseForm.addEventListener("submit", createExpense);
 
   fetchExpenses();
+  fetchUserProfile();
 
   const creditList = document.querySelector(
     ".credit-section .transaction-list",
@@ -210,4 +282,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const debitList = document.querySelector(".debit-section .transaction-list");
   if (creditList) creditList.addEventListener("click", handleTransactionAction);
   if (debitList) debitList.addEventListener("click", handleTransactionAction);
+
+  const leaderboardBtn = document.getElementById("btn-leaderboard");
+  const closeLeaderboardBtn = document.getElementById("closeLeaderboardBtn");
+  const leaderboardModal = document.getElementById("leaderboardModal");
+
+  if (leaderboardBtn)
+    leaderboardBtn.addEventListener("click", fetchLeaderboard);
+
+  if (closeLeaderboardBtn) {
+    closeLeaderboardBtn.addEventListener("click", () => {
+      leaderboardModal.style.display = "none";
+    });
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get("payment");
+
+  // fetch payment status from the url
+  if (paymentStatus === "success") {
+    alert("Payment Successful. Welcome to Premium");
+
+    // clean the url(payment status removed from the url)
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (paymentStatus === "failed") {
+    alert("Payment failed or was cancelled. Please try again.");
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 });

@@ -18,6 +18,9 @@
             <button type="button" id="btn-premium" class="btn-premium">
                 Premium
             </button>
+            <button type="button" id="btn-leaderboard" class="nav-btn hidden">
+                🏆 Leaderboard
+            </button>
             <a href="profile.html" class="nav-btn profile-btn">Profile</a>
         </nav>
     </header>
@@ -130,6 +133,16 @@
                     <button type="submit" class="btn-primary">Save Record</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="leaderboardModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" id="closeLeaderboardBtn">&times;</span>
+            <h2>Premium Leaderboard</h2>
+            <ul id="leaderboard-list" class="transaction-list">
+                <!-- Data will be injected here -->
+            </ul>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>

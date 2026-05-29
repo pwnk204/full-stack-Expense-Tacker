@@ -57,7 +57,7 @@ const paymentVerify = async (req, res, next) => {
     if (paymentInfo && paymentInfo.payment_status === "SUCCESS") {
       console.log("Payment Verified, Upgrading user payment status in db");
 
-      const user = await User.update({ isPremium: true }, { where: { id: 1 } });
+      const user = await User.update({ isPremium: true }, { where: { id: 2 } });
 
       // 4. Redirect the user's browser back to the daily dashboard
       // You can add a query parameter to show a success message on the frontend

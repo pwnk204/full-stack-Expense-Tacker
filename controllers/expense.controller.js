@@ -48,7 +48,7 @@ const createExpense = async (req, res, next) => {
 
 const getExpenses = async (req, res, next) => {
   try {
-    const expenses = await Expense.findAll();
+    const expenses = await Expense.findAll({where: {userId: req.userId}});
 
     res.status(StatusCodes.OK).json({
       success: "true",
