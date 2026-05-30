@@ -5,24 +5,16 @@ import { StatusCodes } from "http-status-codes";
 const createExpense = async (req, res, next) => {
   try {
     console.log("inside createExpense: ", req.userId);
-    const { amount, date, category, description, transactionType } = req.body;
+    const { amount, date, description, transactionType } = req.body;
 
     console.log("req.body: ", req.body);
 
-    if (
-      !category ||
-      !date ||
-      !amount ||
-      !description ||
-      !transactionType ||
-      !req.userId
-    ) {
+    if (!date || !amount || !description || !transactionType || !req.userId) {
       return next(new AppError("All fields are required", "BAD_REQUEST", 400));
     }
 
     const expense = await Expense.create({
       description: description,
-      category: category,
       date: date,
       amount: amount,
       transactionType: transactionType,
@@ -48,7 +40,7 @@ const createExpense = async (req, res, next) => {
 
 const getExpenses = async (req, res, next) => {
   try {
-    const expenses = await Expense.findAll({where: {userId: req.userId}});
+    const expenses = await Expense.findAll({ where: { userId: req.userId } });
 
     res.status(StatusCodes.OK).json({
       success: "true",
@@ -97,7 +89,7 @@ const deleteExpense = async (req, res, next) => {
         "Internal server error during deleting expense.",
         "INTERNAL_SERVER_ERROR",
         StatusCodes.INTERNAL_SERVER_ERROR,
-        {cause: error}
+        { cause: error },
       ),
     );
   }
