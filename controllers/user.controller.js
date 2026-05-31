@@ -7,6 +7,8 @@ import { StatusCodes } from "http-status-codes";
 import { MailtrapClient } from "mailtrap";
 import AppError from "../utils/errors/app.error.js";
 import dotenv from "dotenv";
+import sendEmail from "../services/email.service.js";
+import { STATUS_CODES } from "http";
 
 // dotenv.config();
 
@@ -41,7 +43,11 @@ const registerUser = async (req, res, next) => {
     const hash = await bcrypt.hash(password, saltRounds);
 
     const token = crypto.randomBytes(32).toString("hex");
-    console.log("Generated Token:", token);
+    const tokenExpiry = new Date(Date.now() + 1 * 60 * 1000);
+    console.log("Register Generated Token:", token);
+    console.log("Register tokenExpiry: ", tokenExpiry);
+
+    console.log("Register tokenCreatedAt: ", new Date());
 
     const newUser = await User.create({
       userName,
@@ -49,6 +55,8 @@ const registerUser = async (req, res, next) => {
       password: hash,
       userPhone,
       verificationToken: token,
+      verificationTokenExpires: tokenExpiry,
+      verificationTokenCreatedAt: new Date(),
     });
 
     console.log("newuser:", newUser.toJSON());
@@ -83,30 +91,14 @@ const registerUser = async (req, res, next) => {
     //     category: "Email Verification",
     //   });
 
-    const recipients = newUser.userEmail;
+    // const recipients = newUser.userEmail;
 
     // const sender = {
     //   email: "test@example.com",
     //   name: "Mailtrap Test",
     // };
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_TRAP_HOST,
-      port: process.env.MAIL_TRAP_PORT,
-      secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
-      auth: {
-        user: process.env.MAIL_TRAP_USERNAME,
-        pass: process.env.MAIL_TRAP_PASSWORD,
-      },
-    });
-
-    const message = {
-      from: '"Expense Tracker App" <hello@demomailtrap.co>',
-      to: recipients,
-      subject: "Verify Your Account",
-      text: `Welcome ${newUser.userName}! Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${token}`,
-
-      html: `
+    const htmlContent = `
       <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
           <h2>Welcome, ${newUser.userName}!</h2>
           <p>You're almost ready to start tracking your expenses.</p>
@@ -119,10 +111,14 @@ const registerUser = async (req, res, next) => {
              ${process.env.BASE_URL}/api/v1/user/verify/${token}
           </p>
       </div>
-    `,
-    };
+    `;
 
-    const sendMail = await transporter.sendMail(message);
+    await sendEmail(
+      newUser.userEmail,
+      `Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${token}`,
+      "Verify Your Account",
+      htmlContent,
+    );
 
     return res.status(StatusCodes.CREATED).json({
       success: true,
@@ -149,7 +145,24 @@ const verifyUser = async (req, res, next) => {
 
     const user = await User.findOne({ where: { verificationToken: token } });
 
+    console.log("inside verify user: ", user);
+
     if (!user) {
+      return next(
+        new AppError(
+          "Invalid or expired verification token.",
+          "BAD_REQUEST",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
+    }
+
+    const timeSinceLastEmail =
+      Date.now() - new Date(user.verificationTokenExpires).getTime();
+
+      console.log("timeSinceLastEmail: ", timeSinceLastEmail);
+
+    if (timeSinceLastEmail >= 0) {
       return next(
         new AppError(
           "Invalid or expired verification token.",
@@ -161,6 +174,8 @@ const verifyUser = async (req, res, next) => {
 
     user.isVerified = true;
     user.verificationToken = null;
+    user.verificationTokenCreatedAt = null;
+    user.verificationTokenCreatedAt = null;
     await user.save();
 
     // Redirect them to your frontend HTML page
@@ -176,6 +191,79 @@ const verifyUser = async (req, res, next) => {
     next(
       new AppError(
         message,
+        "INTERNAL_SERVER_ERROR",
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        { cause: error },
+      ),
+    );
+  }
+};
+
+const resendVerificationEmail = async (req, res, next) => {
+  try {
+    const user = await User.findByPk(req.userId);
+
+    if (!user) {
+      return next(
+        new AppError("User not found", "NOT_FOUND", StatusCodes.NOT_FOUND),
+      );
+    }
+
+    if (user.isVerified) {
+      return next(
+        new AppError(
+          "Email is already verified",
+          "BAD_REQUEST",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
+    }
+
+    // PREVENT SPAM , 2 MIN
+    const timeSinceLastEmail =
+      Date.now() - new Date(user.verificationTokenCreatedAt).getTime();
+    // if (timeSinceLastEmail < 120000) {
+    //   return res.status(429).json({
+    //     success: false,
+    //     message: "Please wait 2 minutes before requesting a new link.",
+    //   });
+    // }
+
+    const newToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await user.update({
+      verificationToken: newToken,
+      verificationTokenExpires: tokenExpiry,
+      verificationTokenCreatedAt: new Date(),
+    });
+
+    const verificationLink = `${process.env.BASE_URL}/api/v1/user/verify/${newToken}`;
+
+    const htmlContent = `
+    <h2>Welcome to ExpenseTracker!</h2>
+    <p>Please verify your email by clicking the link below:</p>
+    <a href="${verificationLink}">Verify Account</a>
+`;
+     console.log("after resending email verification")
+    await sendEmail(
+      user.userEmail,
+      `Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${newToken}`,
+      "Verify Your Account",
+      htmlContent,
+    );
+
+
+    res.redirect('http://127.0.0.1:5500/login.html')
+
+    // res.status(StatusCodes.OK).json({
+    //   success: true,
+    //   message: "A new verification link has been sent to your email.",
+    // });
+  } catch (error) {
+    return next(
+      AppError(
+        "Failed to send verification email",
         "INTERNAL_SERVER_ERROR",
         StatusCodes.INTERNAL_SERVER_ERROR,
         { cause: error },
@@ -207,12 +295,12 @@ const login = async (req, res, next) => {
       });
     }
 
-    if (!userExist.isVerified) {
-      return res.status(403).json({
-        success: false,
-        message: "Please verify your email before logging in.",
-      });
-    }
+    // if (!userExist.isVerified) {
+    //   return res.status(403).json({
+    //     success: false,
+    //     message: "Please verify your email before logging in.",
+    //   });
+    // }
 
     const passwordIsMatch = await bcrypt.compare(password, userExist.password);
 
@@ -233,8 +321,8 @@ const login = async (req, res, next) => {
 
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
       maxAge: oneDay,
     };
 
@@ -264,7 +352,6 @@ const login = async (req, res, next) => {
 const getMe = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.userId, {
-     
       attributes: { exclude: ["password"] },
     });
 
@@ -282,4 +369,4 @@ const getMe = async (req, res, next) => {
     next(error);
   }
 };
-export { registerUser, verifyUser, login, getMe };
+export { registerUser, verifyUser, login, getMe, resendVerificationEmail };

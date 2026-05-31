@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import User from "./user.model.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
 
 const Expense = sequelize.define("Expense", {
   amount: {
@@ -58,18 +58,14 @@ const Expense = sequelize.define("Expense", {
 //hooks to make sure i don't forget update the totalExpense and it should be in sync.
 
 Expense.addHook("afterCreate", async (expense, options) => {
-  try {
-    const user = await User.findByPk(expense.userId);
-    if (user) {
-      const currentTotal = parseFloat(user.totalExpense);
-      const addedAmount = parseFloat(expense.amount);
+  // transaction passed down from the main controller to hooks in sequelize
+  const t = options.transaction;
 
-      user.totalExpense = currentTotal + addedAmount;
-      await user.save();
-    }
-  } catch (error) {
-    console.error("Hook Error: Failed to update totalExpense on create", error);
-  }
+  await User.increment("totalExpense", {
+    by: parseFloat(expense.amount),
+    where: { id: expense.userId },
+    transaction: t,
+  });
 });
 
 Expense.addHook("afterDestroy", async (expense, options) => {
@@ -110,32 +106,32 @@ Expense.addHook("afterUpdate", async (expense, options) => {
   }
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
 
-Expense.addHook("beforeCreate", async (expense, options) => {
-  try {
-    const prompt = `
-            You are an AI assistant for an expense tracker application. 
-            Categorize the following expense based on its description and amount.
+// Expense.addHook("beforeCreate", async (expense, options) => {
+//   try {
+//     const prompt = `
+//             You are an AI assistant for an expense tracker application. 
+//             Categorize the following expense based on its description and amount.
             
-            Description: "${expense.description}"
-            Amount: ${expense.amount}
+//             Description: "${expense.description}"
+//             Amount: ${expense.amount}
             
-            You MUST reply with exactly ONE word from this exact list: 
-            [Food, Transport, Utilities, Entertainment, Health, Shopping, Salary, Other]
+//             You MUST reply with exactly ONE word from this exact list: 
+//             [Food, Transport, Utilities, Entertainment, Health, Shopping, Salary, Other]
             
-            Do not include punctuation, explanations, or any other words. Just the category name.
-        `;
+//             Do not include punctuation, explanations, or any other words. Just the category name.
+//         `;
 
-    const result = await model.generateContent(prompt);
-    const categoryResponse = result.response.text().trim();
+//     const result = await model.generateContent(prompt);
+//     const categoryResponse = result.response.text().trim();
 
-    expense.category = categoryResponse;
-  } catch (error) {
-    console.error("Gemini AI categorization failed:", error);
-    expense.category = "Other";
-  }
-});
+//     expense.category = categoryResponse;
+//   } catch (error) {
+//     console.error("Gemini AI categorization failed:", error);
+//     expense.category = "Other";
+//   }
+// });
 
 export default Expense;
