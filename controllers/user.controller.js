@@ -9,6 +9,7 @@ import AppError from "../utils/errors/app.error.js";
 import dotenv from "dotenv";
 import sendEmail from "../services/email.service.js";
 import { STATUS_CODES } from "http";
+import sequelize from "../config/db.js";
 
 // dotenv.config();
 
@@ -49,17 +50,21 @@ const registerUser = async (req, res, next) => {
 
     console.log("Register tokenCreatedAt: ", new Date());
 
-    const newUser = await User.create({
-      userName,
-      userEmail,
-      password: hash,
-      userPhone,
-      verificationToken: token,
-      verificationTokenExpires: tokenExpiry,
-      verificationTokenCreatedAt: new Date(),
+    const newUser = await sequelize.transaction(async (t) => {
+      const user = await User.create(
+        {
+          userName,
+          userEmail,
+          password: hash,
+          userPhone,
+          verificationToken: token,
+          verificationTokenExresetPasswordExpiry: tokenExpiry,
+          verificationTokenCreatedAt: new Date(),
+        },
+        { transaction: t },
+      );
+      return user;
     });
-
-    console.log("newuser:", newUser.toJSON());
 
     //   const client = new MailtrapClient({ token: process.env.MAILTRAP_TOKEN });
 
@@ -157,12 +162,12 @@ const verifyUser = async (req, res, next) => {
       );
     }
 
-    const timeSinceLastEmail =
-      Date.now() - new Date(user.verificationTokenExpires).getTime();
+    const timeRemaining =
+      Date.now() - new Date(user.verificationTokenExresetPasswordExpiry).getTime();
 
-      console.log("timeSinceLastEmail: ", timeSinceLastEmail);
+    console.log("timeRemaining: ", timeRemaining);
 
-    if (timeSinceLastEmail >= 0) {
+    if (timeRemaining >= 0) {
       return next(
         new AppError(
           "Invalid or expired verification token.",
@@ -234,7 +239,7 @@ const resendVerificationEmail = async (req, res, next) => {
 
     await user.update({
       verificationToken: newToken,
-      verificationTokenExpires: tokenExpiry,
+      verificationTokenExresetPasswordExpiry: tokenExpiry,
       verificationTokenCreatedAt: new Date(),
     });
 
@@ -245,7 +250,7 @@ const resendVerificationEmail = async (req, res, next) => {
     <p>Please verify your email by clicking the link below:</p>
     <a href="${verificationLink}">Verify Account</a>
 `;
-     console.log("after resending email verification")
+    console.log("after resending email verification");
     await sendEmail(
       user.userEmail,
       `Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${newToken}`,
@@ -253,8 +258,7 @@ const resendVerificationEmail = async (req, res, next) => {
       htmlContent,
     );
 
-
-    res.redirect('http://127.0.0.1:5500/login.html')
+    res.redirect("http://127.0.0.1:5500/login.html");
 
     // res.status(StatusCodes.OK).json({
     //   success: true,
@@ -369,4 +373,74 @@ const getMe = async (req, res, next) => {
     next(error);
   }
 };
-export { registerUser, verifyUser, login, getMe, resendVerificationEmail };
+
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return next(
+        new AppError(
+          "Please provide an email address.",
+          "BAD_REQUEST",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
+    }
+
+    const user = await User.findOne({ where: { userEmail: email } });
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "If an account with that email exists, a password reset link has been sent.",
+      });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    const tokenExpiry = new Date(Date.now() + 5 * 60 * 1000);
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpiry = tokenExpiry;
+    await user.save();
+
+    const resetURL = `http://127.0.0.1:5500/public/reset-password.html?token=${resetToken}`;
+
+    const emailTemplate = `
+            <h2>Password Reset Request</h2>
+            <p>You requested to reset your password. Click the link below to set a new one:</p>
+            <a href="${resetURL}" style="display:inline-block; padding:10px 20px; background:#4db6ac; color:white; text-decoration:none;">Reset Password</a>
+            <p>If you did not request this, please ignore this email. This link will expire in 15 minutes.</p>
+        `;
+
+    await sendEmail(
+      user.userEmail,
+      `Please resset your password by clicking this link: ${resetURL}`,
+      "Password Reset Request",
+      emailTemplate,
+    );
+
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resetPassword = async (req, res, next) => {
+  
+};
+export {
+  registerUser,
+  verifyUser,
+  login,
+  getMe,
+  resendVerificationEmail,
+  forgotPassword,
+  resetPassword
+};
