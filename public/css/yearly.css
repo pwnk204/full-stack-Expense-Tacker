@@ -1,0 +1,162 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+
+.header {
+  background-color: #4db6ac; 
+  color: white;
+  padding: 0 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.header-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+.brand {
+  font-size: 1.5rem;
+  font-weight: bold;
+  padding: 15px 0;
+}
+
+.nav-links {
+  flex-grow: 1;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  
+}
+
+.nav-btn {
+  color: white;
+  text-decoration: none;
+  padding: 15px 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-btn.active {
+  border-bottom: 3px solid white;
+}
+
+.profile-btn {
+  border: 1px solid white;
+  border-radius: 5px;
+  margin: 8px 0;
+  padding: 7px 15px;
+  margin-left: auto;
+  
+}
+
+.yearly-container {
+  max-width: 800px;
+  height: 200px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.summary-header {
+  background-color: #e0f2f1;
+  border-radius: 8px 8px 0 0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center; 
+  border: 1px solid #b2dfdb;
+}
+
+.date-display {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: white;
+  padding: 5px 15px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.date-arrow {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #555;
+}
+
+
+.table-container {
+  background: white;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  overflow-x: auto; /* scrollbar for small screens so table doesn't break */
+}
+
+
+.yearly-table {
+  width: 100%;
+  border-collapse: collapse; 
+  text-align: left;
+}
+
+.yearly-table th {
+  background-color: #f8f9fa;
+  color: #555;
+  font-weight: 600;
+  padding: 15px 20px;
+  border-bottom: 2px solid #e1e8e8;
+}
+
+.yearly-table td {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  color: #333;
+}
+
+.yearly-table tbody tr:hover {
+  background-color: #f1f8f8;
+}
+
+
+.text-right {
+  text-align: right;
+}
+
+.text-success {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.text-danger {
+  color: #e74c3c;
+  font-weight: 600;
+}
+

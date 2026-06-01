@@ -10,7 +10,10 @@
 
 <body>
     <header class="header">
-        <div class="brand">ExpenseTracker</div>
+        <div class="header-left">
+            <div class="brand">ExpenseTracker</div>
+        </div>
+
         <nav class="nav-links">
             <a href="daily.html" class="nav-btn active">Daily</a>
             <a href="monthly.html" class="nav-btn">Monthly</a>
@@ -21,22 +24,25 @@
             <button type="button" id="btn-leaderboard" class="nav-btn hidden">
                 🏆 Leaderboard
             </button>
-            <a href="profile.html" class="nav-btn profile-btn">Profile</a>
         </nav>
+
+        <div class="header-right">
+            <a href="profile.html" class="nav-btn profile-btn">Profile</a>
+        </div>
     </header>
 
     <main class="daily-container">
         <section class="summary-header">
-            <div class="date-display">
-                <button type="button" class="date-arrow">&lt;</button>
-                <div class="current-date">
-                    <span class="day">16</span>
-                    <div class="month-year">
-                        <span>May, 2026</span>
-                        <small>Saturday</small>
+            <div class="date-display date-selector">
+                <button id="btn-prev-date" type="button" class="date-arrow">&lt;</button>
+                <div class="current-date date-display-info">
+                    <span id = "display-day" class="day">16</span>
+                    <div class="month-year date-details">
+                        <span id="display-month-year">May, 2026</span>
+                        <span id="display-weekday">Saturday</span>
                     </div>
                 </div>
-                <button type="button" class="date-arrow">&gt;</button>
+                <button id="btn-next-date" type="button" class="date-arrow">&gt;</button>
             </div>
 
             <div class="balance-display">

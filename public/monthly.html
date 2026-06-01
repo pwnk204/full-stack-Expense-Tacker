@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="./css/monthly.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="brand">ExpenseTracker</div>
+        </div>
+        <nav class="nav-links">
+            <a href="daily.html" class="nav-btn">Daily</a>
+            <a href="monthly.html" class="nav-btn active">Monthly</a>
+            <a href="yearly.html" class="nav-btn">Yearly</a>
+        </nav>
+         <div class="header-right">
+            <a href="profile.html" class="nav-btn profile-btn">Profile</a>
+        </div>
+    </header>
+
+    <main class="monthly-container">
+        <section class="summary-header">
+            <div class="date-display">
+                <button class="date-arrow">&lt;</button>
+                <div class="current-month">
+                    <span>May, 2026</span>
+                </div>
+                <button class="date-arrow">&gt;</button>
+            </div>
+
+            <div class="transaction-summary">
+                <div class="credit-summary">
+                    <h4>Total Income (Credit)</h4>
+                    <h4>$500.00</h4>
+                </div>
+
+                <div class="debit-summary">
+                    <h4>Total Expense (Debit)</h4>
+                    <h4 style="text-align: right;">$500.00</h4>
+                </div>
+
+                <div class="cf-row">
+                    <h4>C/F</h4>
+                    <h4 class="cf-amount">-$44.00</h4>
+                </div>
+
+                <div class="balance-display">
+                    <small style="text-align: right;">Balance</small>
+                    <h3>$392.00</h3>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="table-container">
+            <table class="monthly-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th class="text-right">Income (Credit)</th>
+                        <th class="text-right">Expense (Debit)</th>
+                    </tr>
+                </thead>
+                <tbody id="monthly-table-body">
+                    <tr>
+                        <td>16 May 2026</td>
+    
+                        <td class="text-right text-success">$500.00</td>
+                        <td class="text-right">-</td>
+                    </tr>
+                    <tr>
+                        <td>16 May 2026</td>
+                        
+                        <td class="text-right">-</td>
+                        <td class="text-right text-danger">$64.00</td>
+                    </tr>
+                    <tr>
+                        <td>14 May 2026</td>
+                        
+                        <td class="text-right text-success">$10.00</td>
+                        <td class="text-right">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="./js/monthly.js"></script>
+
+</body>
+
+</html>

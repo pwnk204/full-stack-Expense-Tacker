@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="./css/yearly.css">
+</head>
+
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="brand">ExpenseTracker</div>
+        </div>
+        <nav class="nav-links">
+            <a href="daily.html" class="nav-btn">Daily</a>
+            <a href="monthly.html" class="nav-btn ">Monthly</a>
+            <a href="yearly.html" class="nav-btn active">Yearly</a>
+        </nav>
+        <div class="header-right">
+            <a href="profile.html" class="nav-btn profile-btn">Profile</a>
+        </div>
+    </header>
+
+    <main class="yearly-container">
+        <section class="summary-header">
+            <div class="date-display">
+                <button class="date-arrow">&lt;</button>
+                <div class="current-year">
+                    <span>2026</span>
+                </div>
+                <button class="date-arrow">&gt;</button>
+            </div>
+        </section>
+
+        <section class="table-container">
+            <table class="yearly-table">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th class="text-right">Income (Credit)</th>
+                        <th class="text-right">Expense (Debit)</th>
+                        <th class="text-right">Balance</th>
+                    </tr>
+                </thead>
+                <tbody id="yearly-table-body">
+                    <tr>
+                        <td>Jan</td>
+                        <td>Salary / income</td>
+                        <td class="text-right text-success">$500.00</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">0</td>
+                    </tr>
+                    <tr>
+                        <td>April</td>
+                        <td>Hshshs (Groceries)</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right text-danger">$64.00</td>
+                        <td class="text-right">0</td>
+                    </tr>
+                    <tr>
+                        <td>May</td>
+                        <td>No description</td>
+                        <td class="text-right text-success">$10.00</td>
+                        <td class="text-right">-</td>
+                        <td class="text-right">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="./js/yearly.js"></script>
+</body>
+
+</html>
