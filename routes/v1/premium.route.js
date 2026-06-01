@@ -6,6 +6,6 @@ import isLoggedin from '../../middlewares/auth.middleware.js';
 const router = express.Router();
 
 
-router.get("/leaderboard", isLoggedin, getLeaderboard)
+router.get("/leaderboard", isLoggedin, getLeaderboard);
 
 export default router;

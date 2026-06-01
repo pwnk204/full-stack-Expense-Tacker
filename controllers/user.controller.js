@@ -433,7 +433,63 @@ const forgotPassword = async (req, res, next) => {
 };
 
 const resetPassword = async (req, res, next) => {
-  
+  try {
+    const { token } = req.params; 
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 6) {
+      return next(
+        new AppError(
+          "Password must be at least 6 characters long.",
+          "BAD_REQUEST",
+          400,
+        ),
+      );
+    }
+
+    const user = await User.findOne({
+      where: { resetPasswordToken: token },
+    });
+
+    if (!user) {
+      return next(
+        new AppError("Invalid or expired reset token.", "BAD_REQUEST", 400),
+      );
+    }
+
+    
+    const timeRemaining =
+      new Date(user.resetPasswordExpiry).getTime() - Date.now();
+    if (timeRemaining < 0) {
+      
+      user.resetPasswordToken = null;
+      user.resetPasswordExpiry = null;
+      await user.save();
+      return next(
+        new AppError(
+          "Reset token has expired. Please request a new one.",
+          "BAD_REQUEST",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
+    }
+    
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpiry = null;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Password has been successfully reset. You can now log in.",
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 export {
   registerUser,
