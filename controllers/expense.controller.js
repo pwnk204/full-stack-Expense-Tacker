@@ -96,15 +96,56 @@ const getExpenses = async (req, res, next) => {
   }
 };
 
+const getExpensesByDate = async (req, res, next) => { 
+  try {
+    const {date} = req.params;
+
+    const limit = parseInt(req.query.limit)|| 5;
+
+    const pageNo = parseInt(req.query.pageNo) || 1;
+
+    const offset = (pageNo-1)*limit;
+
+    const {count, rows} = await Expense.findAndCountAll({ where: { date: date, userId: req.userId }, offset: offset, limit: limit });
+
+    console.log("getExpenseByDate Count: ", count);
+    console.log("getExpenseDate: ", rows);
+
+    res.status(StatusCodes.OK).json({
+      success: "true",
+      message: "fetched all the expenses successfully",
+      expenses: rows,
+      count: count
+    });
+
+  } catch (error) {
+
+    return next(
+      new AppError(
+        "Error fetching expenses",
+        String(StatusCodes.INTERNAL_SERVER_ERROR),
+        500,
+        { cause: error },
+      ),
+    );
+    
+  }
+ }
+
 const getMonthlyExpense = async (req, res, next) => {
   try {
     console.log("monthly data");
-    const { year, month } = req.query;
-    const formattedMonth = month.toString().padStart(2, "0");
-    const lastDay = new Date(year, month, 0).getDate();
+    const { year } = req.query;
+    const month = parseInt(req.query.month);
+    console.log("month: ", month, " ", typeof month);
+    const formattedMonth = (month+1).toString().padStart(2, "0");
+    const lastDay = new Date(year, (month+1), 0).getDate();
 
     const startDate = `${year}-${formattedMonth}-01`;
     const endDate = `${year}-${formattedMonth}-${lastDay}`;
+
+    console.log("startDate: ", startDate);
+    console.log("endDate: ", endDate);
 
     const monthlySummary = await Expense.findAll({
       where: {
@@ -112,10 +153,10 @@ const getMonthlyExpense = async (req, res, next) => {
         date: { [Op.between]: [startDate, endDate] },
       },
       attributes: [
-        // 1. Extract just the Day number (e.g., 14, 16)
+       
         [sequelize.fn("DAY", sequelize.col("date")), "day"],
 
-        // 2. Sum up credits for this specific day
+       
         [
           sequelize.fn(
             "SUM",
@@ -126,7 +167,7 @@ const getMonthlyExpense = async (req, res, next) => {
           "totalIncome",
         ],
 
-        // 3. Sum up debits for this specific day
+       
         [
           sequelize.fn(
             "SUM",
@@ -137,7 +178,7 @@ const getMonthlyExpense = async (req, res, next) => {
           "totalExpense",
         ],
       ],
-      // Group by the day
+  
       group: [sequelize.fn("DAY", sequelize.col("date"))],
       order: [[sequelize.fn("DAY", sequelize.col("date")), "ASC"]],
     });
@@ -157,12 +198,13 @@ const getMonthlyExpense = async (req, res, next) => {
   }
 };
 
-// Get all transactions for a whole year
+
 const getYearlyExpense = async (req, res, next) => {
   try {
     const { year } = req.query;
-    const startDate = `${year}-01-01`;
-    const endDate = `${year}-12-31`;
+    const targetYear = parseInt(year) || new Date().getFullYear();
+    const startDate = `${targetYear}-01-01`;
+    const endDate = `${targetYear}-12-31`;
 
     const yearlySummary = await Expense.findAll({
       where: {
@@ -170,10 +212,10 @@ const getYearlyExpense = async (req, res, next) => {
         date: { [Op.between]: [startDate, endDate] },
       },
       attributes: [
-        // 1. Extract the month number
+      
         [sequelize.fn("MONTH", sequelize.col("date")), "month"],
 
-        // 2. Sum up all credits for this month
+        
         [
           sequelize.fn(
             "SUM",
@@ -184,7 +226,7 @@ const getYearlyExpense = async (req, res, next) => {
           "totalIncome",
         ],
 
-        // 3. Sum up all debits for this month
+        
         [
           sequelize.fn(
             "SUM",
@@ -195,7 +237,7 @@ const getYearlyExpense = async (req, res, next) => {
           "totalExpense",
         ],
       ],
-      // Group by the month number
+     
       group: [sequelize.fn("MONTH", sequelize.col("date"))],
       order: [[sequelize.fn("MONTH", sequelize.col("date")), "ASC"]],
     });
@@ -259,6 +301,7 @@ export {
   createExpense,
   getExpenses,
   deleteExpense,
+  getExpensesByDate,
   getMonthlyExpense,
   getYearlyExpense,
 };

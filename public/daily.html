@@ -36,7 +36,7 @@
             <div class="date-display date-selector">
                 <button id="btn-prev-date" type="button" class="date-arrow">&lt;</button>
                 <div class="current-date date-display-info">
-                    <span id = "display-day" class="day">16</span>
+                    <span id="display-day" class="day">16</span>
                     <div class="month-year date-details">
                         <span id="display-month-year">May, 2026</span>
                         <span id="display-weekday">Saturday</span>
@@ -140,6 +140,15 @@
             </ul>
         </div>
     </div>
+
+    <div id="pagination-container" class="pagination-wrapper">
+        <button type = "button" id = "btn-prev-batch" class = 'page-btn'>&lt;</button>
+        
+        <div id="btn-container"></div>
+
+        <button type = "button" id = "btn-next-batch" class = 'page-btn'>&gt;</button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
     <script src="./js/daily.js"></script>

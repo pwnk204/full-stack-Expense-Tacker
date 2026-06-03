@@ -1,5 +1,46 @@
 const API_URL = "http://127.0.0.1:3000/api/v1/expense";
 
+let currentDate = new Date();
+
+let currentPage = 1;
+let batch = 1;
+const limit = 2;
+let totalItems = 0;
+
+const updateDateDisplayUI = () => {
+  const day = currentDate.getDate();
+
+  const month = currentDate.toLocaleString("default", { month: "short" });
+  const year = currentDate.getFullYear();
+
+  const weekday = currentDate.toLocaleString("default", { weekday: "long" });
+
+  document.getElementById("display-day").innerText = day;
+  document.getElementById("display-month-year").innerText = `${month}, ${year}`;
+  document.getElementById("display-weekday").innerText = weekday;
+};
+
+document.getElementById("btn-prev-date").addEventListener("click", () => {
+  currentDate.setDate(currentDate.getDate() - 1);
+
+  updateDateDisplayUI();
+
+  currentPage = 1;
+  batch = 1;
+
+  fetchExpensesForDate(currentDate, limit, currentPage);
+});
+
+document.getElementById("btn-next-date").addEventListener("click", () => {
+  currentDate.setDate(currentDate.getDate() + 1);
+
+  updateDateDisplayUI();
+  currentPage = 1;
+  batch = 1;
+
+  fetchExpensesForDate(currentDate, limit, currentPage);
+});
+
 async function createExpense(e) {
   e.preventDefault();
   try {
@@ -8,7 +49,6 @@ async function createExpense(e) {
       transactionType: e.target.transactionType.value,
       date: e.target.date.value,
       description: e.target.description.value,
-      category: e.target.category.value,
     };
 
     const response = await axios.post(API_URL, data, {
@@ -29,13 +69,28 @@ async function createExpense(e) {
   }
 }
 
-async function fetchExpenses() {
+async function fetchExpensesForDate(dateObj, limit, pageNo) {
   try {
-    const response = await axios.get(`${API_URL}/all`, {
+    // YYYY-MM-DD
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    const formattedDate = `${year}-${month}-${day}`;
+
+    // Send the specific date to your backend
+    const response = await axios.get(`${API_URL}/daily/${formattedDate}`, {
+      params: {
+        limit: limit,
+        pageNo: pageNo,
+      },
       withCredentials: true,
     });
 
     const expenses = response.data.expenses;
+
+    totalItems = response.data.count;
+
+    console.log("Date expenses: ", expenses);
 
     const creditList = document.querySelector(
       ".credit-section .transaction-list",
@@ -93,6 +148,8 @@ async function fetchExpenses() {
     balanceDisplay.innerText = `$${currentBalance.toFixed(2)}`;
     totalCreditDisplay.innerText = `$${totalCredit.toFixed(2)}`;
     totalDebitDisplay.innerText = `$${totalDebit.toFixed(2)}`;
+
+     createPaginationBtns(totalItems);
   } catch (error) {
     console.error("Failed to fetch expenses:", error);
     if (error.response && error.response.status === 401) {
@@ -100,6 +157,70 @@ async function fetchExpenses() {
     }
   }
 }
+
+const createPaginationBtns = (totalItems) => {
+  console.log("totalItems: ", totalItems);
+  const container = document.getElementById("pagination-container");
+  const btnContainer = document.getElementById("btn-container");
+  const prevBtn = document.getElementById("btn-prev-batch");
+  const nextBtn = document.getElementById("btn-next-batch");
+
+  const actualTotalPages = Math.ceil(totalItems / limit);
+
+  if (actualTotalPages === 0) {
+    container.style.display = "none";
+    return;
+  } else {
+    container.style.display = "flex";
+  }
+
+  btnContainer.innerHTML = " ";
+  const endPage = batch * 3;
+  const startPage = endPage - 2;
+
+  for (let i = startPage; i <= Math.min(endPage, actualTotalPages); i++) {
+   
+    const numBtn = document.createElement("button");
+    numBtn.classList.add("page-btn");
+    numBtn.innerText = i;
+    numBtn.dataset.pageNo = i;
+
+   
+    if (i === currentPage) {
+      numBtn.classList.add("active");
+    }
+
+    numBtn.addEventListener("click", (e) => {
+     
+      currentPage = parseInt(e.target.dataset.pageNo);
+      fetchExpensesForDate(currentDate, limit, currentPage);
+    });
+
+    btnContainer.appendChild(numBtn);
+  }
+
+  prevBtn.disabled = batch === 1;
+  nextBtn.disabled = endPage >= actualTotalPages;
+};
+
+const prevBtn = document.getElementById("btn-prev-batch");
+const nextBtn = document.getElementById("btn-next-batch");
+
+document.getElementById("btn-prev-batch").addEventListener("click", () => {
+  if (batch > 1) {
+    batch--;
+    currentPage = batch * 3 - 2;
+    fetchExpensesForDate(currentDate, limit, currentPage);
+  }
+});
+
+document.getElementById("btn-next-batch").addEventListener("click", () => {
+  if (batch * 3 < Math.ceil(totalItems / limit)) {
+    batch++;
+    currentPage = batch * 3 - 2;
+    fetchExpensesForDate(currentDate, limit, currentPage);
+  }
+});
 
 async function fetchUserProfile() {
   try {
@@ -112,14 +233,12 @@ async function fetchUserProfile() {
     const leaderboardBtn = document.getElementById("btn-leaderboard");
 
     if (user.isPremium) {
-      // 1. Handle the Premium Button safely
       if (premiumBtn) {
         premiumBtn.innerHTML = "Premium Member";
         premiumBtn.disabled = true;
         premiumBtn.classList.add("is-premium-badge");
       }
 
-      // 2. Handle the Leaderboard Button safely!
       if (leaderboardBtn) {
         leaderboardBtn.classList.remove("hidden");
       }
@@ -137,7 +256,6 @@ async function fetchLeaderboard() {
   leaderboardList.innerHTML = "<li>Loading ranks</li>";
 
   try {
-   
     const response = await axios.get(
       "http://127.0.0.1:3000/api/v1/premium/leaderboard",
       {
@@ -149,7 +267,6 @@ async function fetchLeaderboard() {
 
     console.log(leaderboardData);
 
-   
     leaderboardList.innerHTML = "";
 
     // add data into list
@@ -187,7 +304,7 @@ const handleTransactionAction = async (e) => {
           withCredentials: true,
         });
 
-        fetchExpenses();
+        fetchExpensesForDate(currentDate, limit, currentPage);
       } catch (error) {
         console.error("Delete failed:", error);
         alert("Could not delete the expense.");
@@ -240,6 +357,10 @@ async function handlePremiumCheckout() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  updateDateDisplayUI();
+
+  fetchExpensesForDate(currentDate, limit, currentPage);
+
   const addEntryBtn = document.getElementById("add-entry-btn");
   const expenseModal = document.getElementById("expenseModal");
   const closeModalBtn = document.getElementById("closeModalBtn");
@@ -273,7 +394,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   createExpenseForm.addEventListener("submit", createExpense);
 
-  fetchExpenses();
   fetchUserProfile();
 
   const creditList = document.querySelector(
