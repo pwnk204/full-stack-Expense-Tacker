@@ -18,6 +18,11 @@
             <a href="monthly.html" class="nav-btn ">Monthly</a>
             <a href="yearly.html" class="nav-btn active">Yearly</a>
         </nav>
+        <div class="table-header-actions">
+            <button id="btn-download-csv" class="btn-outline">
+                📥 Download CSV
+            </button>
+        </div>
         <div class="header-right">
             <a href="profile.html" class="nav-btn profile-btn">Profile</a>
         </div>
@@ -26,11 +31,11 @@
     <main class="yearly-container">
         <section class="summary-header">
             <div class="date-display">
-                <button class="date-arrow">&lt;</button>
+                <button id="btn-prev-date" class="date-arrow">&lt;</button>
                 <div class="current-year">
-                    <span>2026</span>
+                    <span id="display-year">2026</span>
                 </div>
-                <button class="date-arrow">&gt;</button>
+                <button id="btn-next-date" class="date-arrow">&gt;</button>
             </div>
         </section>
 
@@ -73,7 +78,7 @@
 
     </main>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="./js/yearly.js"></script>
+    <script type = "module" src="./js/yearly.js"></script>
 </body>
 
 </html>

@@ -117,7 +117,7 @@ body {
   background: white;
   border-radius: 0 0 8px 8px;
   box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-  overflow-x: auto; /* scrollbar for small screens so table doesn't break */
+  overflow-x: auto; 
 }
 
 

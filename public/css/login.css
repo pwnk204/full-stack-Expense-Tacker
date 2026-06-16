@@ -5,11 +5,12 @@
   font-family:
     "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", "Lucida Sans",
     Arial, sans-serif;
+    
 }
 
 body {
   background-color: rgb(53, 53, 54);
-  color: #111111;
+  color: #eae8e8;
 }
 
 .login-container {
@@ -18,6 +19,7 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 20px;
+  
 }
 
 .login-card {
@@ -32,6 +34,7 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+  
 }
 
 .login-card h2 {
@@ -53,6 +56,7 @@ body {
 #login-form {
   align-self: flex-start;
   width: 100%;
+
 }
 
 .form-field {
@@ -63,7 +67,7 @@ body {
   margin-bottom: 8px;
   font-weight: 500;
   font-size: 14px;
-  color: #eff1f3;
+  
 }
 
 .form-field input {
@@ -74,6 +78,7 @@ body {
   border-radius: 6px;
   font-size: 0.85rem;
   transition: outline 0.3s ease;
+  color: white;
 }
 
 .form-field input:focus {
@@ -89,6 +94,7 @@ body {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
+  color: black;
 }
 
 .login-footer {

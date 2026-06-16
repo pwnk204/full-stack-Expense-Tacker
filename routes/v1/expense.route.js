@@ -1,20 +1,33 @@
 import express from "express";
-import {
-  createExpense,
-  deleteExpense,
-  getExpenses,
-  getMonthlyExpense,
-  getYearlyExpense,
-} from "../../controllers/expense.controller.js";
-import isLoggedin from '../../middlewares/auth.middleware.js';
+import { ExpenseController } from "../../controllers/index.js";
+import { AuthMiddleware, PremiumMiddleware, VerificationMiddleware } from "../../middlewares/index.js";
 
-const router = express.Router();
+ const router = express.Router();
 
-router.post("/", isLoggedin, createExpense);
-router.get("/all", isLoggedin, getExpenses);
-router.get("/yearly", isLoggedin, getYearlyExpense);
-router.get("/monthly", isLoggedin, getMonthlyExpense)
-router.delete("/:id", isLoggedin, deleteExpense);
-
+router.post("/", AuthMiddleware.isLoggedin, VerificationMiddleware.requireVerification,ExpenseController.createExpense);
+router.get("/all", AuthMiddleware.isLoggedin, ExpenseController.getExpenses);
+router.get(
+  "/yearly",
+  AuthMiddleware.isLoggedin,
+  PremiumMiddleware.requirePremium,
+  ExpenseController.getYearlyExpense,
+);
+router.get(
+  "/monthly",
+  AuthMiddleware.isLoggedin,
+  PremiumMiddleware.requirePremium,
+  ExpenseController.getMonthlyExpense,
+);
+router.get(
+  "/daily/:date",
+  AuthMiddleware.isLoggedin,
+  ExpenseController.getExpensesByDate,
+);
+router.delete(
+  "/:id",
+  AuthMiddleware.isLoggedin,
+  ExpenseController.deleteExpense,
+);
+router.put("/:id", AuthMiddleware.isLoggedin, ExpenseController.updateExpense);
 
 export default router;

@@ -5,22 +5,25 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 import { MailtrapClient } from "mailtrap";
-import AppError from "../utils/errors/app.error.js";
+import { AppError, ApiResponse, logger } from "../utils/index.js";
 import dotenv from "dotenv";
-import sendEmail from "../services/email.service.js";
+import {
+  CashFreeService,
+  BrevoEmailService,
+} from "../services/index.js";
 import { STATUS_CODES } from "http";
 import sequelize from "../config/db.js";
-
-// dotenv.config();
 
 const registerUser = async (req, res, next) => {
   const { userName, userEmail, password, userPhone } = req.body;
 
+ 
+  logger.info("User registration initiated", { email: userEmail });
+
   if (!userName || !userEmail || !password) {
     return next(
       new AppError(
-        "User already exist",
-        "BAD_REQUEST",
+        "Please provide all required fields.",
         StatusCodes.BAD_REQUEST,
       ),
     );
@@ -30,25 +33,16 @@ const registerUser = async (req, res, next) => {
     const userExist = await User.findOne({ where: { userEmail } });
 
     if (userExist) {
-      return next(
-        new AppError(
-          "User already exist",
-          "BAD_REQUEST",
-          StatusCodes.BAD_REQUEST,
-        ),
-      );
+
+      logger.warn("Registration blocked: Email already exists", { email: userEmail });
+      return next(new AppError("User already exist.", StatusCodes.BAD_REQUEST));
     }
 
     const saltRounds = 10;
-
     const hash = await bcrypt.hash(password, saltRounds);
 
     const token = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = new Date(Date.now() + 1 * 60 * 1000);
-    console.log("Register Generated Token:", token);
-    console.log("Register tokenExpiry: ", tokenExpiry);
-
-    console.log("Register tokenCreatedAt: ", new Date());
 
     const newUser = await sequelize.transaction(async (t) => {
       const user = await User.create(
@@ -58,7 +52,7 @@ const registerUser = async (req, res, next) => {
           password: hash,
           userPhone,
           verificationToken: token,
-          verificationTokenExresetPasswordExpiry: tokenExpiry,
+          verificationTokenExpires: tokenExpiry,
           verificationTokenCreatedAt: new Date(),
         },
         { transaction: t },
@@ -66,81 +60,55 @@ const registerUser = async (req, res, next) => {
       return user;
     });
 
-    //   const client = new MailtrapClient({ token: process.env.MAILTRAP_TOKEN });
+    
+    logger.info("User inserted into database successfully", { userId: newUser.id, email: newUser.userEmail });
 
-    // const sender = {
-    //   email: "hello@demomailtrap.co",
-    //   name: "Expense Tracker App",
-    // };
+    try {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+            <h2>Welcome, ${userName}!</h2>
+            <p>You're almost ready to start tracking your expenses.</p>
+            <a href="${process.env.BASE_URL}/api/v1/user/verify/${token}"
+               style="background-color: #4db6ac; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; font-weight: bold;">
+               Verify My Account
+            </a>
+            <p style="margin-top: 20px; font-size: 12px; color: #777;">
+               If the button doesn't work, copy and paste this link into your browser:<br>
+               ${process.env.BASE_URL}/api/v1/user/verify/${token}
+            </p>
+        </div>
+      `;
+  
+      await BrevoEmailService.sendEmail(htmlContent, "Verify Your Account", [
+        { email: newUser.userEmail, name: newUser.userName },
+      ]);
+      
+     
+      logger.info("Verification email sent via Brevo", { email: newUser.userEmail });
+      
+    } catch (emailError) {
+      
+      logger.error("Failed to send verification email", { 
+        email: newUser.userEmail, 
+        error: emailError.message 
+      });
+    }
 
-    //   await client.send({
-    //     from: sender,
-    //     to: recipients,
-    //     subject: "Verify Your Account",
-    //     text: `Welcome ${newUser.userName}! Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${token}`,
-
-    //     html: `
-    //   <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-    //       <h2>Welcome, ${newUser.userName}!</h2>
-    //       <p>You're almost ready to start tracking your expenses.</p>
-    //       <a href="${process.env.BASE_URL}/api/v1/user/verify/${token}"
-    //          style="background-color: #4db6ac; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; font-weight: bold;">
-    //          Verify My Account
-    //       </a>
-    //       <p style="margin-top: 20px; font-size: 12px; color: #777;">
-    //          If the button doesn't work, copy and paste this link into your browser:<br>
-    //          ${process.env.BASE_URL}/api/v1/user/verify/${token}
-    //       </p>
-    //   </div>
-    // `,
-    //     category: "Email Verification",
-    //   });
-
-    // const recipients = newUser.userEmail;
-
-    // const sender = {
-    //   email: "test@example.com",
-    //   name: "Mailtrap Test",
-    // };
-
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-          <h2>Welcome, ${newUser.userName}!</h2>
-          <p>You're almost ready to start tracking your expenses.</p>
-          <a href="${process.env.BASE_URL}/api/v1/user/verify/${token}"
-             style="background-color: #4db6ac; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; font-weight: bold;">
-             Verify My Account
-          </a>
-          <p style="margin-top: 20px; font-size: 12px; color: #777;">
-             If the button doesn't work, copy and paste this link into your browser:<br>
-             ${process.env.BASE_URL}/api/v1/user/verify/${token}
-          </p>
-      </div>
-    `;
-
-    await sendEmail(
-      newUser.userEmail,
-      `Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${token}`,
-      "Verify Your Account",
-      htmlContent,
-    );
-
-    return res.status(StatusCodes.CREATED).json({
-      success: true,
-      message:
-        "Account created successfully. Please check your email to verify your account.",
-    });
+    return res
+      .status(StatusCodes.CREATED)
+      .json(
+        new ApiResponse(
+          "Account created successfully. Please check your email to verify your account.",
+          StatusCodes.CREATED,
+        ),
+      );
   } catch (error) {
-    console.error("Signup Error:", error);
-    const message = "Internal server error during signup.";
-    next(
-      new AppError(
-        message,
-        "INTERNAL_SERVER_ERROR",
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        { cause: error },
-      ),
-    );
+   
+    logger.error("Error during user registration", { 
+        error: error.message, 
+        stack: error.stack 
+    });
+    next(error);
   }
 };
 
@@ -150,28 +118,25 @@ const verifyUser = async (req, res, next) => {
 
     const user = await User.findOne({ where: { verificationToken: token } });
 
-    console.log("inside verify user: ", user);
-
     if (!user) {
+      
+      logger.warn("Verification failed: Token not found in database");
       return next(
         new AppError(
           "Invalid or expired verification token.",
-          "BAD_REQUEST",
           StatusCodes.BAD_REQUEST,
         ),
       );
     }
 
-    const timeRemaining =
-      Date.now() - new Date(user.verificationTokenExresetPasswordExpiry).getTime();
+    const timeElapsed =
+      Date.now() - new Date(user.verificationTokenExpiry).getTime();
 
-    console.log("timeRemaining: ", timeRemaining);
-
-    if (timeRemaining >= 0) {
+    if (timeElapsed >= 0) {
+      logger.warn("Verification failed: Token expired", { userId: user.id });
       return next(
         new AppError(
           "Invalid or expired verification token.",
-          "BAD_REQUEST",
           StatusCodes.BAD_REQUEST,
         ),
       );
@@ -180,66 +145,43 @@ const verifyUser = async (req, res, next) => {
     user.isVerified = true;
     user.verificationToken = null;
     user.verificationTokenCreatedAt = null;
-    user.verificationTokenCreatedAt = null;
     await user.save();
 
-    // Redirect them to your frontend HTML page
-    // return res.redirect("http://localhost:5500/login.html");
-    res.status(StatusCodes.OK).json({
-      message: "user verified successfully",
-      success: true,
-    });
-  } catch (error) {
-    console.log("verifyUser: ", error);
+    
+    logger.info("User account successfully verified", { userId: user.id, userEmail: user.userEmail });
 
-    const message = "Internal server error during verifying user.";
-    next(
-      new AppError(
-        message,
-        "INTERNAL_SERVER_ERROR",
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        { cause: error },
-      ),
-    );
+    return res.redirect('/login.html?status=verified');
+
+  } catch (error) {
+    logger.error("Email verification failed", { error: error.message });
+    return res.redirect('/login.html?status=verification_failed');
   }
 };
 
 const resendVerificationEmail = async (req, res, next) => {
   try {
+    
+    logger.info("Resend verification email requested", { userId: req.userId });
+
     const user = await User.findByPk(req.userId);
 
     if (!user) {
-      return next(
-        new AppError("User not found", "NOT_FOUND", StatusCodes.NOT_FOUND),
-      );
+      return next(new AppError("User not found", StatusCodes.NOT_FOUND));
     }
 
     if (user.isVerified) {
+      logger.warn("Resend email blocked: User already verified", { userId: user.id });
       return next(
-        new AppError(
-          "Email is already verified",
-          "BAD_REQUEST",
-          StatusCodes.BAD_REQUEST,
-        ),
+        new AppError("Email is already verified", StatusCodes.BAD_REQUEST),
       );
     }
-
-    // PREVENT SPAM , 2 MIN
-    const timeSinceLastEmail =
-      Date.now() - new Date(user.verificationTokenCreatedAt).getTime();
-    // if (timeSinceLastEmail < 120000) {
-    //   return res.status(429).json({
-    //     success: false,
-    //     message: "Please wait 2 minutes before requesting a new link.",
-    //   });
-    // }
 
     const newToken = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await user.update({
       verificationToken: newToken,
-      verificationTokenExresetPasswordExpiry: tokenExpiry,
+      verificationTokenExpiry: tokenExpiry,
       verificationTokenCreatedAt: new Date(),
     });
 
@@ -250,106 +192,93 @@ const resendVerificationEmail = async (req, res, next) => {
     <p>Please verify your email by clicking the link below:</p>
     <a href="${verificationLink}">Verify Account</a>
 `;
-    console.log("after resending email verification");
-    await sendEmail(
-      user.userEmail,
-      `Please verify your account by clicking this link: ${process.env.BASE_URL}/api/v1/user/verify/${newToken}`,
-      "Verify Your Account",
-      htmlContent,
-    );
 
-    res.redirect("http://127.0.0.1:5500/login.html");
+    await BrevoEmailService.sendEmail(htmlContent, "Verify Your Account", [
+      { email: user.userEmail, name: user.userName },
+    ]);
 
-    // res.status(StatusCodes.OK).json({
-    //   success: true,
-    //   message: "A new verification link has been sent to your email.",
-    // });
+    logger.info("New verification email sent successfully", { userId: user.id });
+
+    res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          "A new verification link has been sent to your email",
+          StatusCodes.OK,
+        ),
+      );
   } catch (error) {
-    return next(
-      AppError(
-        "Failed to send verification email",
-        "INTERNAL_SERVER_ERROR",
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        { cause: error },
-      ),
-    );
+    logger.error("Error resending verification email", { error: error.message });
+    next(error);
   }
 };
 
 const login = async (req, res, next) => {
   const { userEmail, password } = req.body;
 
-  console.log("req.body: ", req.body);
+  
+  logger.info("Login attempt", { email: userEmail });
 
   if (!password || !userEmail) {
-    return res.status(400).json({
-      message: "Email and password are required.",
-    });
+    return next(
+      new AppError(
+        "Please provide all required fields.",
+        StatusCodes.BAD_REQUEST,
+      ),
+    );
   }
 
   try {
     const userExist = await User.findOne({ where: { userEmail: userEmail } });
 
-    console.log("userexist:", userExist);
-    console.log("userexistemail: ", userExist.userEmail);
-
     if (!userExist) {
-      return res.status(StatusCodes.UNAUTHORIZED).json({
-        message: "Invalid email or password.",
-      });
+      
+      logger.warn("Login failed: Email not found", { email: userEmail });
+      return next(
+        new AppError("Invalid email or password.", StatusCodes.UNAUTHORIZED),
+      );
     }
-
-    // if (!userExist.isVerified) {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Please verify your email before logging in.",
-    //   });
-    // }
 
     const passwordIsMatch = await bcrypt.compare(password, userExist.password);
 
-    console.log("password match:", passwordIsMatch);
-
     if (!passwordIsMatch) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
+      
+      logger.warn("Login failed: Incorrect password", { email: userEmail });
+      return next(
+        new AppError("Invalid email or password.", StatusCodes.UNAUTHORIZED),
+      );
     }
 
     const token = jwt.sign({ userId: userExist.id }, process.env.JWT_SECRET, {
       expiresIn: "1d",
     });
-    console.log("token: ", token);
 
     const oneDay = 24 * 60 * 60 * 1000;
 
     const cookieOptions = {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: oneDay,
     };
 
     res.cookie("token", token, cookieOptions);
 
-    // res.redirect('http://127.0.0.1/');
+    
+    logger.info("User logged in successfully", { userId: userExist.id });
 
-    res.status(200).json({
-      message: "login successfull",
-      success: true,
-      token,
-      user: {
-        id: userExist.id,
-        name: userExist.userName,
-      },
-    });
+    res.status(StatusCodes.OK).json(
+      new ApiResponse("Login successful.", 200, {
+        token,
+        user: {
+          id: userExist.id,
+          name: userExist.userName,
+        },
+      }),
+    );
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({
-      message: "user not login",
-      error,
-      success: false,
-    });
+    logger.error("Critical error during login process", { error: error.message, stack: error.stack });
+    next(error);
   }
 };
 
@@ -360,90 +289,94 @@ const getMe = async (req, res, next) => {
     });
 
     if (!user) {
-      const error = new Error("User not found.");
-      error.statusCode = 404;
-      throw error;
+      return next(new AppError("User not found.", StatusCodes.NOT_FOUND));
     }
 
-    res.status(StatusCodes.OK).json({
-      success: true,
-      user: user,
-    });
+    res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse("User fetched successfully", StatusCodes.OK, { user }),
+      );
   } catch (error) {
+    logger.error("Error fetching user profile", { userId: req.userId, error: error.message });
     next(error);
   }
 };
 
 const forgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    const { userEmail } = req.body;
 
-    if (!email) {
+    logger.info("Password reset requested", { userEmail });
+
+    if (!userEmail) {
       return next(
         new AppError(
           "Please provide an email address.",
-          "BAD_REQUEST",
           StatusCodes.BAD_REQUEST,
         ),
       );
     }
 
-    const user = await User.findOne({ where: { userEmail: email } });
+    const user = await User.findOne({ where: { userEmail: userEmail } });
 
     if (!user) {
-      return res.status(200).json({
-        success: true,
-        message:
-          "If an account with that email exists, a password reset link has been sent.",
-      });
+      
+      logger.info("Password reset requested for non-existent email", { email });
+      return res
+        .status(StatusCodes.OK)
+        .json(
+          new ApiResponse(
+            "If an account with that email exists, a password reset link has been sent.",
+            200,
+          ),
+        );
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
-
     const tokenExpiry = new Date(Date.now() + 5 * 60 * 1000);
 
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpiry = tokenExpiry;
     await user.save();
 
-    const resetURL = `http://127.0.0.1:5500/public/reset-password.html?token=${resetToken}`;
+    const resetURL = `${process.env.BASE_URL}/reset-password.html?token=${resetToken}`;
 
-    const emailTemplate = `
+    const htmlContent = `
             <h2>Password Reset Request</h2>
             <p>You requested to reset your password. Click the link below to set a new one:</p>
             <a href="${resetURL}" style="display:inline-block; padding:10px 20px; background:#4db6ac; color:white; text-decoration:none;">Reset Password</a>
             <p>If you did not request this, please ignore this email. This link will expire in 15 minutes.</p>
         `;
 
-    await sendEmail(
-      user.userEmail,
-      `Please resset your password by clicking this link: ${resetURL}`,
-      "Password Reset Request",
-      emailTemplate,
-    );
+    await BrevoEmailService.sendEmail(htmlContent, "Password reset Request", [
+      { email: user.userEmail, name: user.userName },
+    ]);
 
-    res.status(StatusCodes.OK).json({
-      success: true,
-      message:
-        "If an account with that email exists, a password reset link has been sent.",
-    });
+    logger.info("Password reset email sent successfully", { userId: user.id });
+
+    res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          "If an account with that email exists, a password reset link has been sent.",
+          200,
+        ),
+      );
   } catch (error) {
+    logger.error("Error processing forgot password request", { error: error.message });
     next(error);
   }
 };
 
 const resetPassword = async (req, res, next) => {
   try {
-    const { token } = req.params; 
+    const { token } = req.params;
     const { newPassword } = req.body;
 
     if (!newPassword || newPassword.length < 6) {
       return next(
-        new AppError(
-          "Password must be at least 6 characters long.",
-          "BAD_REQUEST",
-          400,
-        ),
+        new AppError("Password must be at least 6 characters long.", 400),
       );
     }
 
@@ -452,28 +385,31 @@ const resetPassword = async (req, res, next) => {
     });
 
     if (!user) {
-      return next(
-        new AppError("Invalid or expired reset token.", "BAD_REQUEST", 400),
-      );
-    }
-
-    
-    const timeRemaining =
-      new Date(user.resetPasswordExpiry).getTime() - Date.now();
-    if (timeRemaining < 0) {
-      
-      user.resetPasswordToken = null;
-      user.resetPasswordExpiry = null;
-      await user.save();
+      logger.warn("Password reset failed: Invalid or missing token");
       return next(
         new AppError(
-          "Reset token has expired. Please request a new one.",
-          "BAD_REQUEST",
+          "Invalid or expired reset token.",
           StatusCodes.BAD_REQUEST,
         ),
       );
     }
-    
+
+    const timeRemaining =
+      new Date(user.resetPasswordExpiry).getTime() - Date.now();
+      
+    if (timeRemaining < 0) {
+      user.resetPasswordToken = null;
+      user.resetPasswordExpiry = null;
+      await user.save();
+      logger.warn("Password reset failed: Token expired", { userId: user.id });
+      return next(
+        new AppError(
+          "Reset token has expired. Please request a new one.",
+          StatusCodes.BAD_REQUEST,
+        ),
+      );
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
@@ -483,14 +419,104 @@ const resetPassword = async (req, res, next) => {
 
     await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Password has been successfully reset. You can now log in.",
-    });
+    logger.info("Password successfully reset using token", { userId: user.id });
+
+    res
+      .status(StatusCodes.OK)
+      .json(
+        new ApiResponse(
+          "Password has been successfully reset. You can now log in.",
+          200,
+        ),
+      );
   } catch (error) {
+    logger.error("Error during password reset", { error: error.message });
     next(error);
   }
 };
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.userId;
+
+    const user = await User.findByPk(userId);
+    if (!user)
+      return next(new AppError("User not found.", StatusCodes.NOT_FOUND));
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      logger.warn("Change password failed: Incorrect old password", { userId });
+      return next(
+        new AppError("Incorrect current password.", StatusCodes.UNAUTHORIZED),
+      );
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    logger.info("User changed their password successfully", { userId });
+
+    res
+      .status(StatusCodes.OK)
+      .json(new ApiResponse("Password updated successfully.", StatusCodes.OK));
+  } catch (error) {
+    logger.error("Error changing password", { userId: req.userId, error: error.message });
+    next(error);
+  }
+};
+
+const logout = (req, res, next) => {
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    logger.info("User logged out", { userId: req.userId });
+
+    res
+      .status(StatusCodes.OK)
+      .json(new ApiResponse("Logged out successfully.", 200));
+  } catch (error) {
+    logger.error("Error during user logout", { error: error.message });
+    next(error);
+  }
+};
+
+const deleteAccount = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    logger.info("Account deletion requested", { userId });
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return next(new AppError("User not found.", StatusCodes.NOT_FOUND));
+    }
+
+    await user.destroy();
+
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    logger.info("User account permanently deleted", { userId });
+
+    res
+      .status(StatusCodes.OK)
+      .json(new ApiResponse("Account successfully deleted.", StatusCodes.OK));
+  } catch (error) {
+    logger.error("Error deleting user account", { userId: req.userId, error: error.message });
+    next(error);
+  }
+};
+
 export {
   registerUser,
   verifyUser,
@@ -498,5 +524,8 @@ export {
   getMe,
   resendVerificationEmail,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  changePassword,
+  logout,
+  deleteAccount,
 };

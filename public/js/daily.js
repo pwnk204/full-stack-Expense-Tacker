@@ -1,18 +1,20 @@
-const API_URL = "http://127.0.0.1:3000/api/v1/expense";
+import { handlePremiumCheckout } from "../../shared/payment.js";
+import logger from '../../shared/logger.js';
+const API_URL = "/api/v1/expense";
 
 let currentDate = new Date();
 
 let currentPage = 1;
 let batch = 1;
-const limit = 2;
+let limit = localStorage.getItem("expensePageLimit") || 3;
 let totalItems = 0;
+let editExpenseId = null;
+let currentExpenses = [];
 
 const updateDateDisplayUI = () => {
   const day = currentDate.getDate();
-
   const month = currentDate.toLocaleString("default", { month: "short" });
   const year = currentDate.getFullYear();
-
   const weekday = currentDate.toLocaleString("default", { weekday: "long" });
 
   document.getElementById("display-day").innerText = day;
@@ -22,22 +24,17 @@ const updateDateDisplayUI = () => {
 
 document.getElementById("btn-prev-date").addEventListener("click", () => {
   currentDate.setDate(currentDate.getDate() - 1);
-
   updateDateDisplayUI();
-
   currentPage = 1;
   batch = 1;
-
   fetchExpensesForDate(currentDate, limit, currentPage);
 });
 
 document.getElementById("btn-next-date").addEventListener("click", () => {
   currentDate.setDate(currentDate.getDate() + 1);
-
   updateDateDisplayUI();
   currentPage = 1;
   batch = 1;
-
   fetchExpensesForDate(currentDate, limit, currentPage);
 });
 
@@ -51,33 +48,48 @@ async function createExpense(e) {
       description: e.target.description.value,
     };
 
-    const response = await axios.post(API_URL, data, {
-      withCredentials: true,
-    });
+    let response;
+    let successMessage = "";
 
-    console.log("Success:", response.data.message);
+    if (editExpenseId) {
+      logger.info("Submitting expense update", { expenseId: editExpenseId });
+      response = await axios.put(`${API_URL}/${editExpenseId}`, data, {
+        withCredentials: true,
+      });
+      successMessage = "Expense updated successfully";
+    } else {
+      logger.info("Submitting new expense", { type: data.transactionType });
+      response = await axios.post(API_URL, data, {
+        withCredentials: true,
+      });
+      successMessage = "Expense created successfully";
+    }
 
-    alert("Expense created successfully");
+    closeModal();
+    fetchExpensesForDate(currentDate, limit, currentPage);
+
+    logger.info("Expense action successful", { message: response.data.message });
+    alert(successMessage);
   } catch (error) {
-    console.error("Expense creation failed:", error);
+    logger.error("Expense creation/update failed", error);
 
     if (error.response && error.response.data && error.response.data.message) {
       alert(error.response.data.message);
     } else {
-      alert("Cannot create expense.");
+      alert("Cannot process expense at this time.");
     }
   }
 }
 
 async function fetchExpensesForDate(dateObj, limit, pageNo) {
   try {
-    // YYYY-MM-DD
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, "0");
     const day = String(dateObj.getDate()).padStart(2, "0");
     const formattedDate = `${year}-${month}-${day}`;
 
-    // Send the specific date to your backend
+    logger.info("Fetching expenses for date", { date: formattedDate, limit, pageNo });
+
     const response = await axios.get(`${API_URL}/daily/${formattedDate}`, {
       params: {
         limit: limit,
@@ -86,25 +98,17 @@ async function fetchExpensesForDate(dateObj, limit, pageNo) {
       withCredentials: true,
     });
 
-    const expenses = response.data.expenses;
+    const expenses = response.data.data.expenses;
+    currentExpenses = response.data.data.expenses;
+    totalItems = response.data.data.count;
 
-    totalItems = response.data.count;
+    logger.info("Daily expenses fetched successfully", { returnedCount: expenses.length, totalItems });
 
-    console.log("Date expenses: ", expenses);
-
-    const creditList = document.querySelector(
-      ".credit-section .transaction-list",
-    );
-    const debitList = document.querySelector(
-      ".debit-section .transaction-list",
-    );
+    const creditList = document.querySelector(".credit-section .transaction-list");
+    const debitList = document.querySelector(".debit-section .transaction-list");
     const balanceDisplay = document.querySelector(".balance-display h3");
-    const totalCreditDisplay = document.querySelector(
-      ".credit-header h4:nth-child(2)",
-    );
-    const totalDebitDisplay = document.querySelector(
-      ".debit-header h4:nth-child(2)",
-    );
+    const totalCreditDisplay = document.querySelector(".credit-header h4:nth-child(2)");
+    const totalDebitDisplay = document.querySelector(".debit-header h4:nth-child(2)");
 
     creditList.innerHTML = "";
     debitList.innerHTML = "";
@@ -114,7 +118,6 @@ async function fetchExpensesForDate(dateObj, limit, pageNo) {
 
     expenses.forEach((item) => {
       const amountStr = parseFloat(item.amount).toFixed(2);
-
       const li = document.createElement("li");
       li.classList.add("transaction-item");
 
@@ -149,9 +152,9 @@ async function fetchExpensesForDate(dateObj, limit, pageNo) {
     totalCreditDisplay.innerText = `$${totalCredit.toFixed(2)}`;
     totalDebitDisplay.innerText = `$${totalDebit.toFixed(2)}`;
 
-     createPaginationBtns(totalItems);
+    createPaginationBtns(totalItems);
   } catch (error) {
-    console.error("Failed to fetch expenses:", error);
+    logger.error("Failed to fetch expenses", error);
     if (error.response && error.response.status === 401) {
       window.location.href = "login.html";
     }
@@ -159,7 +162,7 @@ async function fetchExpensesForDate(dateObj, limit, pageNo) {
 }
 
 const createPaginationBtns = (totalItems) => {
-  console.log("totalItems: ", totalItems);
+  logger.info("Rebuilding pagination", { totalItems, batch });
   const container = document.getElementById("pagination-container");
   const btnContainer = document.getElementById("btn-container");
   const prevBtn = document.getElementById("btn-prev-batch");
@@ -178,20 +181,19 @@ const createPaginationBtns = (totalItems) => {
   const endPage = batch * 3;
   const startPage = endPage - 2;
 
+  logger.info("Pagination state", { startPage, endPage, batch, currentPage });
+
   for (let i = startPage; i <= Math.min(endPage, actualTotalPages); i++) {
-   
     const numBtn = document.createElement("button");
     numBtn.classList.add("page-btn");
     numBtn.innerText = i;
     numBtn.dataset.pageNo = i;
 
-   
     if (i === currentPage) {
       numBtn.classList.add("active");
     }
 
     numBtn.addEventListener("click", (e) => {
-     
       currentPage = parseInt(e.target.dataset.pageNo);
       fetchExpensesForDate(currentDate, limit, currentPage);
     });
@@ -224,11 +226,11 @@ document.getElementById("btn-next-batch").addEventListener("click", () => {
 
 async function fetchUserProfile() {
   try {
-    const response = await axios.get("http://127.0.0.1:3000/api/v1/user/me", {
+    const response = await axios.get("/api/v1/user/me", {
       withCredentials: true,
     });
 
-    const user = response.data.user;
+    const user = response.data.data.user;
     const premiumBtn = document.getElementById("btn-premium");
     const leaderboardBtn = document.getElementById("btn-leaderboard");
 
@@ -244,7 +246,7 @@ async function fetchUserProfile() {
       }
     }
   } catch (error) {
-    console.error("Failed to fetch user profile:", error);
+    logger.error("Failed to fetch user profile", error);
   }
 }
 
@@ -256,22 +258,20 @@ async function fetchLeaderboard() {
   leaderboardList.innerHTML = "<li>Loading ranks</li>";
 
   try {
+    logger.info("Requesting leaderboard data");
     const response = await axios.get(
-      "http://127.0.0.1:3000/api/v1/premium/leaderboard",
+      "/api/v1/premium/leaderboard",
       {
         withCredentials: true,
       },
     );
 
-    const leaderboardData = response.data;
-
-    console.log(leaderboardData);
+    const leaderboardData = response.data.data;
+    logger.info("Leaderboard data loaded successfully", { totalUsers: leaderboardData.length });
 
     leaderboardList.innerHTML = "";
 
-    // add data into list
     leaderboardData.forEach((user, index) => {
-      // Your original logic here was correct!
       const total = user.totalExpense
         ? parseFloat(user.totalExpense).toFixed(2)
         : "0.00";
@@ -285,79 +285,125 @@ async function fetchLeaderboard() {
       leaderboardList.appendChild(li);
     });
   } catch (error) {
-    console.error("Leaderboard error:", error);
+    logger.error("Leaderboard fetch error", error);
     leaderboardList.innerHTML = "<li>Could not load leaderboard.</li>";
   }
 }
 
 const handleTransactionAction = async (e) => {
-  //check clicked btn is delete
   const deleteBtn = e.target.closest(".btn-delete");
 
   if (deleteBtn) {
     const expenseId = deleteBtn.dataset.id;
-    console.log("Delete clicked for ID:", expenseId);
+    logger.info("Delete button clicked", { expenseId });
 
     if (confirm("Are you sure you want to delete this record?")) {
       try {
-        await axios.delete(`${API_URL}/${expenseId}`, {
+        const creditList = document.querySelector(".credit-section .transaction-list");
+        const debitList = document.querySelector(".debit-section .transaction-list");
+
+        if (creditList.children.length + debitList.children.length === 1) {
+          const currentBatchFirstPage = batch * 3 - 2;
+          if (currentPage === currentBatchFirstPage) batch = 1;
+          currentPage = 1;
+        }
+
+        const response = await axios.delete(`${API_URL}/${expenseId}`, {
           withCredentials: true,
         });
 
-        fetchExpensesForDate(currentDate, limit, currentPage);
+        const result = response.data;
+        logger.info("Delete response received", { success: result.success, limit, currentPage });
+        
+        if (result.success) {
+          await fetchExpensesForDate(currentDate, limit, currentPage);
+        } else {
+          alert("Failed to delete expense");
+        }
       } catch (error) {
-        console.error("Delete failed:", error);
+        logger.error("Delete request failed", error);
         alert("Could not delete the expense.");
       }
     }
     return;
   }
 
-  // Check the clicked is edit
   const editBtn = e.target.closest(".btn-edit");
   if (editBtn) {
-    const expenseId = editBtn.dataset.id;
-    console.log("Edit clicked for ID:", expenseId);
+    const expenseId = parseInt(editBtn.dataset.id);
+    logger.info("Edit button clicked", { expenseId });
+
+    editExpenseId = editBtn.dataset.id;
+
+    const expenseToEdit = currentExpenses.find((exp) => exp.id === expenseId);
+
+    const form = document.getElementById("createExpenseForm");
+    form.amount.value = expenseToEdit.amount;
+    form.transactionType.value = expenseToEdit.transactionType;
+    form.description.value = expenseToEdit.description;
+    form.date.value = new Date(expenseToEdit.date).toISOString().split("T")[0];
+
+    form.querySelector('button[type="submit"]').innerText = "Update Expense";
+
+    document.getElementById("expenseModal").style.display = "flex";
+    document.getElementById("expenseModal").querySelector("h2").innerText = "Update the Expense";
   }
 };
 
-const cashfree = Cashfree({
-  mode: "sandbox",
-});
+const CheckPaymentStatus = (orderId) => {
+  let attempts = 0;
+  const maxAttempts = 10; 
 
-async function handlePremiumCheckout() {
-  try {
-    const premiumBtn = document.getElementById("btn-premium");
-    const originalText = premiumBtn.innerHTML;
-    premiumBtn.innerHTML = "⏳ Loading...";
-    premiumBtn.disabled = true;
+  const intervalId = setInterval(async () => {
+    attempts++;
 
-    // create Order
-    const response = await axios.post(
-      "http://127.0.0.1:3000/api/v1/payment",
-      {},
-      {
-        withCredentials: true,
-      },
-    );
+    try {
+      logger.info("Polling for pending payment status", { attempt: attempts, orderId });
+      const response = await axios.get(`/api/v1/payments/verify/${orderId}`);
 
-    const paymentSessionId = response.data.order.payment_session_id;
+      if (response.data.success && response.data.message.includes("verified")) {
+        clearInterval(intervalId);
+        logger.info("Pending payment cleared successfully");
+        alert("Awesome! Your payment has been confirmed. Welcome to Premium!");
+        fetchUserProfile(); 
+      }
+    } catch (error) {
+      logger.error("Error checking pending payment status", error);
+    }
 
-    // 4. Launch Cashfree Checkout
-    let checkoutOptions = {
-      paymentSessionId: paymentSessionId,
-      redirectTarget: "_self", //opens a popup.
-    };
+    if (attempts >= maxAttempts) {
+      clearInterval(intervalId);
+      logger.warn("Stopped polling for payment status (max attempts reached)");
+      alert("Payment is still taking a moment to clear. If your money was deducted, your premium status will update automatically in a few minutes.");
+    }
+  }, 3000); 
+};
 
-    await cashfree.checkout(checkoutOptions);
-  } catch (error) {
-    console.error("Could not initiate checkout:", error);
-    alert("Payment initialization failed.");
-  }
-}
+const closeModal = () => {
+  expenseModal.style.display = "none";
+  createExpenseForm.reset();
+  editExpenseId = null;
+  createExpenseForm.querySelector('button[type="submit"]').innerText = "Add Expense";
+};
 
 document.addEventListener("DOMContentLoaded", () => {
   updateDateDisplayUI();
+
+  const limitSelect = document.getElementById("rows-per-page");
+
+  if (limitSelect) {
+    limitSelect.value = limit;
+    limitSelect.addEventListener("change", (e) => {
+      limit = e.target.value;
+      localStorage.setItem("expensePageLimit", limit);
+      logger.info("User changed items per page limit", { newLimit: limit });
+      
+      if (totalItems > 0) {
+        currentPage = 1;
+        fetchExpensesForDate(currentDate, limit, currentPage);
+      }
+    });
+  }
 
   fetchExpensesForDate(currentDate, limit, currentPage);
 
@@ -368,18 +414,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const createExpenseForm = document.getElementById("createExpenseForm");
 
   const openModal = () => {
+    expenseModal.querySelector("h2").innerText = "Add New Record";
     expenseModal.style.display = "flex";
-  };
-
-  const closeModal = () => {
-    expenseModal.style.display = "none";
-    createExpenseForm.reset();
   };
 
   const premiumBtn = document.getElementById("btn-premium");
 
   if (premiumBtn) {
-    premiumBtn.addEventListener("click", handlePremiumCheckout);
+    premiumBtn.addEventListener("click", () => {
+      logger.info("Premium checkout button clicked");
+      handlePremiumCheckout(premiumBtn);
+    });
   }
 
   if (addEntryBtn) addEntryBtn.addEventListener("click", openModal);
@@ -393,13 +438,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   createExpenseForm.addEventListener("submit", createExpense);
-
   fetchUserProfile();
 
-  const creditList = document.querySelector(
-    ".credit-section .transaction-list",
-  );
+  const creditList = document.querySelector(".credit-section .transaction-list");
   const debitList = document.querySelector(".debit-section .transaction-list");
+  
   if (creditList) creditList.addEventListener("click", handleTransactionAction);
   if (debitList) debitList.addEventListener("click", handleTransactionAction);
 
@@ -407,8 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const closeLeaderboardBtn = document.getElementById("closeLeaderboardBtn");
   const leaderboardModal = document.getElementById("leaderboardModal");
 
-  if (leaderboardBtn)
-    leaderboardBtn.addEventListener("click", fetchLeaderboard);
+  if (leaderboardBtn) leaderboardBtn.addEventListener("click", fetchLeaderboard);
 
   if (closeLeaderboardBtn) {
     closeLeaderboardBtn.addEventListener("click", () => {
@@ -418,15 +460,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const paymentStatus = urlParams.get("payment");
+  const orderId = urlParams.get("order_id");
 
-  // fetch payment status from the url
-  if (paymentStatus === "success") {
-    alert("Payment Successful. Welcome to Premium");
+  if (paymentStatus) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    logger.info("Handling payment redirect status", { status: paymentStatus, orderId });
 
-    // clean the url(payment status removed from the url)
-    window.history.replaceState({}, document.title, window.location.pathname);
-  } else if (paymentStatus === "failed") {
-    alert("Payment failed or was cancelled. Please try again.");
-    window.history.replaceState({}, document.title, window.location.pathname);
+    if (paymentStatus === "success") {
+      alert("Payment Successful! Welcome to Premium!");
+    } else if (paymentStatus === "failed") {
+      alert("Payment failed or was cancelled. Please try again.");
+    } else if (paymentStatus === "pending") {
+      alert("Your payment is pending confirmation from your bank. We are checking the status...");
+      if (orderId) {
+        CheckPaymentStatus(orderId);
+      }
+    } else if (paymentStatus === "error") {
+      alert("An error occurred while verifying your payment.");
+    }
+
+    fetchUserProfile();
   }
 });

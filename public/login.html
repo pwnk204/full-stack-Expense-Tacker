@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
     <title>Expense Tracker | login </title>
     <link rel="stylesheet" href="./css/login.css">
 
@@ -16,7 +15,7 @@
         <div class="login-card">
             <h2>Login into your account</h2>
             <p>Enter your information below to login to your account</p>
-            <form action="" id="login-form">
+            <form  id="login-form">
 
                 <div class="form-field">
                     <label for="userEmail">Email</label>
@@ -27,7 +26,7 @@
                 <div class="form-field">
                     <label for="password">Password</label>
                     <input type="password" id="password" name="password" placeholder="" required>
-                    <a href="">Forgot your password</a>
+                    <a href="forgot-password.html">Forgot your password</a>
                 </div>
 
 
@@ -37,12 +36,14 @@
                 <p>Don't have an account? <a href="signup.html">Sign up</a></p>
             </div>
 
+            <div id="errorMessage" style="color: red;"></div>
+
         </div>
 
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="script.js"></script>
+    <script type = "module" src="./js/login.js"></script>
 
 </body>
 

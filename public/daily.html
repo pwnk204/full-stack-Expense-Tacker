@@ -32,6 +32,17 @@
     </header>
 
     <main class="daily-container">
+        <div class="limit-selector" style="margin-bottom: 16px; text-align: center;">
+            <label for="rows-per-page" style="color: #666; font-size: 0.9rem;">Rows per page:</label>
+            <select id="rows-per-page" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ccc;">
+                <option value="3">3</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
         <section class="summary-header">
             <div class="date-display date-selector">
                 <button id="btn-prev-date" type="button" class="date-arrow">&lt;</button>
@@ -58,7 +69,7 @@
         <section class="transaction-card">
             <div class="cf-row">
                 <span>C/F</span>
-                <span class="cf-amount">-$44.00</span>
+                <span class="cf-amount"></span>
             </div>
 
             <div class="transaction-section credit-section">
@@ -67,10 +78,7 @@
                     <h4>$500.00</h4>
                 </div>
                 <ul class="transaction-list">
-                    <li class="transaction-item">
-                        <span class="item-note">Salary</span>
-                        <span class="item-amount credit-amount">500.00</span>
-                    </li>
+
                 </ul>
             </div>
 
@@ -80,10 +88,7 @@
                     <h4>$64.00</h4>
                 </div>
                 <ul class="transaction-list">
-                    <li class="transaction-item">
-                        <span class="item-note">Groceries</span>
-                        <span class="item-amount debit-amount">64.00</span>
-                    </li>
+
                 </ul>
             </div>
         </section>
@@ -141,17 +146,20 @@
         </div>
     </div>
 
+
     <div id="pagination-container" class="pagination-wrapper">
-        <button type = "button" id = "btn-prev-batch" class = 'page-btn'>&lt;</button>
-        
+        <button type="button" id="btn-prev-batch" class='page-btn'>&lt;</button>
+
         <div id="btn-container"></div>
 
-        <button type = "button" id = "btn-next-batch" class = 'page-btn'>&gt;</button>
+        <button type="button" id="btn-next-batch" class='page-btn'>&gt;</button>
     </div>
+
+
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
-    <script src="./js/daily.js"></script>
+    <script type="module" src="./js/daily.js"></script>
 </body>
 
 </html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | Expense Tracker</title>
+    <link rel="stylesheet" href="./css/profile.css">
+</head>
+
+<body>
+    <nav>
+        <a href="daily.html">Back to Dashboard</a>
+    </nav>
+
+    <div class="profile-container">
+        <div class="profile-container">
+
+            <div class="profile-header card">
+                <div class="avatar-circle">
+                    <span id="profile-initial">P</span>
+                </div>
+                <div class="profile-info">
+                    <h2 id="profile-name">Pawan Kumar</h2>
+                    <p id="profile-email">pawan@example.com</p>
+
+                    <div id="premium-badge" class="badge gold hidden">
+                        ★ Premium Member
+                    </div>
+                    <button id="resendVerifyBtn" class="btn-warning-outline">
+                        Verify Email
+                    </button>
+                    <button id="btn-upgrade-profile" class="btn-primary">Upgrade to Premium</button>
+                </div>
+            </div>
+
+            <div class="profile-stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Total Expenses</span>
+                    <h3 id="stat-total-expense">$0.00</h3>
+                </div>
+            
+                <div class="stat-card">
+                    <span class="stat-label">Member Since</span>
+                    <h3 id="stat-joined-date">--</h3>
+                </div>
+            </div>
+
+            <div class="profile-danger-zone card">
+                <h3>Account Management</h3>
+                <p class="warning-text">These actions cannot be easily undone.</p>
+                <div class="danger-actions">
+                    <button id="btn-reset-password" class="btn-outline">Reset Password</button>
+                    <button id="btn-delete-account" class="btn-danger">Delete Account</button>
+                </div>
+                <div id="change-password-form" class="hidden" style="margin-top: 16px;">
+                    <input type="password" id="input-old-password" placeholder="Current Password" required>
+                    <input type="password" id="input-new-password" placeholder="New Password" required>
+                    <button id="btn-submit-password" class="btn-primary" style="margin-top: 8px;">Update
+                        Password</button>
+                </div>
+
+            </div>
+
+            <div class="profile-logout-section" style="margin-top: 24px; text-align: center;">
+                <button id="btn-logout" class="btn-outline" style="border-color: #d32f2f; color: #d32f2f;">
+                    Log Out
+                </button>
+            </div>
+
+        </div>
+    </div>
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script type="module" src="./js/profile.js"></script>
+</body>
+
+</html>

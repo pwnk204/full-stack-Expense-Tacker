@@ -18,7 +18,12 @@
             <a href="monthly.html" class="nav-btn active">Monthly</a>
             <a href="yearly.html" class="nav-btn">Yearly</a>
         </nav>
-         <div class="header-right">
+        <div class="table-header-actions">
+            <button id="btn-download-csv" class="btn-outline">
+                📥 Download CSV
+            </button>
+        </div>
+        <div class="header-right">
             <a href="profile.html" class="nav-btn profile-btn">Profile</a>
         </div>
     </header>
@@ -26,11 +31,11 @@
     <main class="monthly-container">
         <section class="summary-header">
             <div class="date-display">
-                <button class="date-arrow">&lt;</button>
-                <div class="current-month">
-                    <span>May, 2026</span>
+                <button id="btn-prev-date" type="button" class="date-arrow">&lt;</button>
+                <div class="current-month month-display-info">
+                    <span id="display-month-year">May, 2026</span>
                 </div>
-                <button class="date-arrow">&gt;</button>
+                <button id="btn-next-date" type="button" class="date-arrow">&gt;</button>
             </div>
 
             <div class="transaction-summary">
@@ -69,19 +74,19 @@
                 <tbody id="monthly-table-body">
                     <tr>
                         <td>16 May 2026</td>
-    
+
                         <td class="text-right text-success">$500.00</td>
                         <td class="text-right">-</td>
                     </tr>
                     <tr>
                         <td>16 May 2026</td>
-                        
+
                         <td class="text-right">-</td>
                         <td class="text-right text-danger">$64.00</td>
                     </tr>
                     <tr>
                         <td>14 May 2026</td>
-                        
+
                         <td class="text-right text-success">$10.00</td>
                         <td class="text-right">-</td>
                     </tr>
@@ -93,7 +98,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="./js/monthly.js"></script>
+    <script type = "module" src="./js/monthly.js"></script>
 
 </body>
 
