@@ -33,19 +33,18 @@ app.use("/api", apiRoutes);
 
 app.use(ErrorMiddleware.errorHandler);
 
-// console.log("Registered Models:", sequelize.models);
+
 logger.debug("Registered Models successfully", { 
   models: Object.keys(sequelize.models) 
 });
 
-sequelize
-  .sync({ alter: true })
+sequelize.authenticate()
   .then(() => {
-    console.log("All models were synchronized successfully.");
+    logger.info("Database connection established successfully.");
     app.listen(port, (err) => {
       console.log(`Server is up and listening on port ${port}`);
     });
   })
   .catch((err) => {
-    console.log("Synchronisation failed: ", err);
+    logger.error("Unable to connect to the database:", err);
   });

@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.js";
 import User from "./user.model.js";
-import {logger} from "../utils/index.js";
+import { logger } from "../utils/index.js";
 
 const Expense = sequelize.define("Expense", {
   amount: {
@@ -13,7 +13,10 @@ const Expense = sequelize.define("Expense", {
     type: DataTypes.ENUM("credit", "debit"),
     allowNull: false,
   },
-
+  note: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   date: {
     type: DataTypes.DATEONLY,
     allowNull: true,
@@ -55,11 +58,8 @@ const Expense = sequelize.define("Expense", {
   },
 });
 
-
-
 Expense.addHook("afterCreate", async (expense, options) => {
   try {
-   
     const t = options.transaction;
 
     await User.increment("totalExpense", {
@@ -68,7 +68,6 @@ Expense.addHook("afterCreate", async (expense, options) => {
       transaction: t,
     });
 
-    
     logger.info("Hook afterCreate: User totalExpense incremented", {
       userId: expense.userId,
       expenseId: expense.id,
@@ -93,14 +92,12 @@ Expense.addHook("afterDestroy", async (expense, options) => {
       user.totalExpense = currentTotal - removedAmount;
       await user.save();
 
-      
       logger.info("Hook afterDestroy: User totalExpense decremented", {
         userId: expense.userId,
         expenseId: expense.id,
         amountRemoved: expense.amount,
       });
     } else {
-     
       logger.warn(
         "Hook afterDestroy: Expense deleted but User not found to update total",
         {
@@ -128,7 +125,6 @@ Expense.addHook("afterUpdate", async (expense, options) => {
         const oldAmount = parseFloat(expense.previous("amount"));
         const newAmount = parseFloat(expense.amount);
 
-        
         const difference = newAmount - oldAmount;
 
         user.totalExpense = parseFloat(user.totalExpense) + difference;
@@ -157,6 +153,5 @@ Expense.addHook("afterUpdate", async (expense, options) => {
     });
   }
 });
-
 
 export default Expense;

@@ -26,6 +26,7 @@
     "mysql2": "^3.22.3",
     "nodemailer": "^8.0.7",
     "sequelize": "^6.37.8",
+    "sequelize-cli": "^6.6.5",
     "winston": "^3.19.0"
   }
 }
