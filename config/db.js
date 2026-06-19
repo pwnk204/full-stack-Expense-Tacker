@@ -4,24 +4,14 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const sequelize = new Sequelize(
-  'expense_tracker',
-  'root',
+  process.env.DB_NAME,
+  process.env.DB_USER,
   process.env.DB_PASSWORD,
   {
-    host: 'localhost',
+    host: process.env.DB_HOST || '127.0.0.1',
     dialect: 'mysql',
   },
 );
 
-const connection = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log("Connection has been established successfully.");
-  } catch (error) {
-    console.error("Unable to connect to the database:", error);
-  }
-};
-
-connection();
 
 export default sequelize
