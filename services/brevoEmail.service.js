@@ -18,9 +18,7 @@ export const sendEmail = async (htmlContent, subject, to) => {
 
     const response = await brevo.transactionalEmails.sendTransacEmail(message);
 
-    // LOG (INFO): Track successful API communication with Brevo.
-    // We map over the 'to' array to log just the email addresses, 
-    // keeping the log clean and omitting the heavy htmlContent.
+  
     logger.info("Email successfully dispatched via Brevo", { 
         subject: subject, 
         recipients: to.map(recipient => recipient.email) 
@@ -29,8 +27,7 @@ export const sendEmail = async (htmlContent, subject, to) => {
     return true;
     
   } catch (error) {
-    // LOG (ERROR): Capture the exact error Brevo throws.
-    // If Brevo blocks an IP or rejects a sender address, the raw text will tell you why.
+    
     logger.error("Brevo API failure: Email could not be sent", {
         subject: subject,
         recipients: to.map(recipient => recipient.email),

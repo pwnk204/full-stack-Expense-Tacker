@@ -169,11 +169,19 @@ const getMonthlyExpense = async (req, res, next) => {
       order: [[sequelize.fn("DAY", sequelize.col("date")), "ASC"]],
     });
 
+    const monthlyExpenses = await Expense.findAll({
+      where: { userId: req.userId,
+        date: { [Op.between]: [startDate, endDate] }
+       },
+      attributes: ['amount', 'category', 'description', 'transactionType', 'createdAt'], 
+      order: [['createdAt', 'DESC']] 
+    });
+
     logger.info("Monthly expense summary fetched successfully", { userId: req.userId, daysReturned: monthlySummary.length });
 
     res
       .status(StatusCodes.OK)
-      .json(new ApiResponse("fetched all the expenses by month successfully",StatusCodes.OK, { data: monthlySummary }));
+      .json(new ApiResponse("fetched all the expenses by month successfully",StatusCodes.OK, { data: monthlySummary, monthlyExpenses: monthlyExpenses }));
   } catch (error) {
     logger.error("Error fetching monthly expenses", { userId: req.userId, error: error.message });
     next(error);

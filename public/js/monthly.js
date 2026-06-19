@@ -1,4 +1,4 @@
-import { exportToCSV } from "../../shared/utils.js";
+import { MonthlyCSV } from "../../shared/csv.utils.js";
 import logger from '../../shared/logger.js';
 
 const monthNames = [
@@ -62,7 +62,7 @@ async function fetchMonthlyData(year, month) {
     );
 
     const transactions = response.data.data.data;
-    currentMonthlyExpenses = response.data.data.data;
+    currentMonthlyExpenses = response.data.data.monthlyExpenses;
     const tableBody = document.getElementById("monthly-table-body");
 
     tableBody.innerHTML = ""; // Clear existing rows
@@ -161,7 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       logger.info("CSV download initiated", { filename, recordsExported: currentMonthlyExpenses.length });
       
-      exportToCSV(currentMonthlyExpenses, filename);
+      MonthlyCSV(currentMonthlyExpenses, filename);
     });
   }
 });

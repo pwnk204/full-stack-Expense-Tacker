@@ -1,6 +1,6 @@
 import { body, validationResult } from "express-validator";
 import { StatusCodes } from "http-status-codes";
-import {logger} from "../utils/index.js"
+import { logger } from "../utils/index.js";
 
 const emailRule = body("userEmail")
   .trim()
@@ -27,7 +27,25 @@ const PasswordRule = body("password")
 const signupValidator = [emailRule, PasswordRule];
 const loginValidator = [emailRule];
 const forgotPasswordValidator = [emailRule];
-const resetPasswordValidator = [PasswordRule];
+const resetPasswordValidator = [
+  
+  body("oldPassword").notEmpty().withMessage("Old password is required."),
+
+  
+  body("newPassword")
+    .notEmpty()
+    .withMessage("New password is required.")
+    .isStrongPassword({
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1,
+    })
+    .withMessage(
+      "New password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.",
+    ),
+];
 
 const validateRequest = (req, res, next) => {
   const errors = validationResult(req);
@@ -35,7 +53,6 @@ const validateRequest = (req, res, next) => {
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-     
       const failedFields = errors.array().map((err) => err.path);
 
       logger.warn("Request failed validation", {

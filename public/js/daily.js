@@ -266,7 +266,7 @@ async function fetchLeaderboard() {
       },
     );
 
-    const leaderboardData = response.data.data;
+    const leaderboardData = response.data.data.leaderboard;
     logger.info("Leaderboard data loaded successfully", { totalUsers: leaderboardData.length });
 
     leaderboardList.innerHTML = "";
